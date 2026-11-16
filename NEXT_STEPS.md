@@ -22,7 +22,7 @@ ARCHITECTURE.md) on every new screen.
 | 5b. Check a real photo, 5c. photo on a wall | Sonnet | medium | **next** |
 | 6. Training game mode | Sonnet | medium | |
 | 7. Evaluation script | Sonnet | medium | |
-| 7b. Realism pass + detector retrain | Fable | high | done early (look is final; retrain running, see "Training status") |
+| 7b. Realism pass + detector retrain | Fable | high | done (numbers in "Training status") |
 | 8. README and final graphify run | Sonnet | low | |
 
 Handoffs: before step 8 ask for `/effort low`. Format:
@@ -44,29 +44,30 @@ Both servers may still be running from the previous session (`curl -s localhost:
 Tests run headless with software rendering at about 3 fps, so use generous timeouts.
 Look at screenshots (Read the PNG) after every UI change.
 
-## Training status (do this first)
+## Training status: done
 
-The home's look changed in step 7b (baked lighting, real windows), so the detector is being
-retrained for it by `sh ml/retrain.sh` (log `retrain.log`). The first run finished 13:42
-(5 epochs, best EMA metric 0.62). The 1,360 new-look views were rendered and checked
-(1,200 train + 160 valid, labels sane), so **editing `web/src` is safe again**. The last
-stage started 2026-11-16 13:46: 4 epochs into `models/run2`, about 80 min, then it copies
-the result to `models/detector.pth` and prints "retrain: done".
+The detector was retrained for the new look (step 7b). `sh ml/retrain.sh` finished
+2026-11-16 14:59 (4 epochs into `models/run2`, best EMA metric 0.62), `models/detector.pth`
+is the new model and the API was restarted with it.
 
-If the chain died (no `ml/train.py` process and no "retrain: done" in `retrain.log`), run it
-again: `nohup sh ml/retrain.sh > retrain.log 2>&1 &` (it re-renders too, about 5 min, and
-during that render `web/src` and `web/public` must not be edited: Vite reloads the page and
-the render script dies; safe once `retrain.log` shows the "160 images" line).
+In-app numbers, `node tests/detect-eval.mjs 3 20` (put these in README and `results/eval.md`;
+these views reuse training decals, so they flatter the model):
 
-Until it finishes, `models/detector.pth` is a mid-run checkpoint trained on the OLD look, so
-in-app detections are unreliable. When `retrain.log` says "retrain: done":
+| Class | Precision | Recall |
+|---|---|---|
+| crack | 100% | 92% |
+| mold | 93% | 82% |
+| peeling_paint | 60% | 100% |
+| stairstep_crack | 100% | 89% |
+| water_seepage | 93% | 74% |
+| **all** | **88%** | **85%** (91% of 67 located ignoring the label) |
 
-    pkill -f "uvicorn server.app"; uv run uvicorn server.app:app --port 8000   # restart
-    cd web && node tests/detect-eval.mjs 3 20      # record the numbers here and in README
-
-Old-look reference with the old mid-run weights: precision 70%, recall 65% (78% located
-ignoring the label; `water_seepage` often called `peeling_paint`). If the new numbers are
-under about 60% recall, run `sh ml/retrain.sh` once more (it continues from the best weights).
+Before the retrain (old look, mid-run weights): precision 70%, recall 65%. Weak spot now:
+`peeling_paint` is over-called (6 false positives), mostly on `water_seepage`.
+To retrain again (only if geometry, furniture or lights change): rebake, then
+`nohup sh ml/retrain.sh > retrain.log 2>&1 &` (about 1.5 hours). While it renders (until
+`retrain.log` shows the "160 images" line) do not edit `web/src` or `web/public`: Vite
+reloads the page and the render script dies.
 Training memory: batch 4 holds about 5 GB. Never raise the batch size or worker count
 (a batch-8 run hit 12 GB and pushed the laptop into swap). Never run two trainings at once.
 
