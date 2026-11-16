@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { buildHouse, roomAt, DECOR_LAYER } from './house.js';
+import { HDRLoader } from 'three/addons/loaders/HDRLoader.js';
+import { buildHouse, roomAt } from './house.js';
 import { createWalk } from './walk.js';
 import { loadDecals, plantDefects, clearDefects, visibleBoxes, randomPose, rng } from './defects.js';
 import { capture, detect } from './detect.js';
@@ -16,12 +16,10 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xcfe3f2);
-scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
-scene.environmentIntensity = 0.35;
+scene.backgroundIntensity = 1.5; // the park outside reads as bright daylight
+scene.environmentIntensity = 0.3; // reflections only; diffuse light is baked
 
 const camera = new THREE.PerspectiveCamera(70, 1, 0.05, 60);
-camera.layers.enable(DECOR_LAYER);
 const house = buildHouse(scene);
 const walk = createWalk(camera, canvas, house.colliders);
 const SPAWN = [4.6, 3.4, 0.6];
@@ -29,14 +27,14 @@ const SPAWN = [4.6, 3.4, 0.6];
 // Quality levels, cheapest first. Full retina resolution with every effect ran at 5 fps on an
 // M3, so for people a governor (below) picks the best level the GPU can hold. Automated runs
 // (tests, data rendering) stay on plain rendering unless ?fx=1; ?fx=0 forces plain.
-const LEVELS = [{ pr: 1 }, { pr: 1.5 }, { pr: 1, fx: true }, { pr: 1, fx: true, ao: true }, { pr: 1.5, fx: true, ao: true }];
+const LEVELS = [{ pr: 1 }, { pr: 1.5 }, { pr: 1, fx: true }, { pr: 1.5, fx: true }, { pr: 2, fx: true }];
 const fxParam = new URLSearchParams(location.search).get('fx');
 const auto = fxParam === 'auto' || (!fxParam && !navigator.webdriver);
 let level = fxParam === '1' ? 3 : auto ? 2 : 1, ceiling = LEVELS.length - 1, fx = null;
 function applyLevel() {
   const q = LEVELS[level];
   renderer.setPixelRatio(Math.min(q.pr, devicePixelRatio));
-  if (q.fx) (fx ??= createFx(renderer, scene, camera)).ao.enabled = !!q.ao;
+  if (q.fx) fx ??= createFx(renderer, scene, camera);
   resize();
 }
 const gov = { t: 0, n: 0 };
@@ -63,8 +61,9 @@ export const app = { THREE, renderer, scene, camera, house, walk, planted: [] };
 
 // The home's own condition: a fixed set of defects (the game replants with a random seed).
 const LISTING_SEED = 7;
-const decals = await loadDecals();
-await house.ready;
+const [decals, sky] = await Promise.all([loadDecals(), new HDRLoader().loadAsync('/textures/sky_2k.hdr'), house.ready]);
+sky.mapping = THREE.EquirectangularReflectionMapping;
+scene.background = scene.environment = sky;
 export function replant(seed, count = 8) {
   clearDefects(scene, app.planted);
   app.planted = plantDefects(scene, house, decals, seed, count);
@@ -223,6 +222,7 @@ const truth = (shot) => visibleBoxes(shot.camera, app.planted, house.occluders).
 window.inspecto = {
   app, pins, teleport: walk.teleport, analyze, replant, rng,
   quality: () => level, // current LEVELS index chosen by the governor
+  bake: async (o) => (await import('./bake.js')).bake(app, o), // dev tool, see tests/bake.mjs
   analyzeTruth: () => analyze(truth), // pin the ground-truth boxes instead of asking the detector
   planted: () => app.planted.map(({ mesh, ...d }) => d),
   randomPose: (rand) => randomPose(rand, app.planted, house.colliders),

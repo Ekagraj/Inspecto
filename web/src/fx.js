@@ -1,9 +1,9 @@
-// Display-only post-processing: ambient occlusion, bloom, vignette and grain.
+// Display-only post-processing: bloom, neutral tone mapping, vignette and grain. Shadows and
+// ambient occlusion are baked into the scene, so nothing costly runs here.
 // The detector never sees this: capture() renders the plain scene, which is what it was trained on.
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
@@ -26,16 +26,11 @@ const Grade = {
 export function createFx(renderer, scene, camera) {
   const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 }));
   composer.addPass(new RenderPass(scene, camera));
-  const ao = new GTAOPass(scene, camera);
-  ao.updateGtaoMaterial({ radius: 0.55, distanceExponent: 1.4, thickness: 1.2, scale: 1.25, samples: 8 });
-  ao.updatePdMaterial({ radius: 6, rings: 2, samples: 8 }); // smoother denoise, less speckle on edges
-  composer.addPass(ao);
   composer.addPass(new UnrealBloomPass(new THREE.Vector2(256, 256), 0.07, 0.45, 3.0)); // threshold in linear HDR: windows and lamps only
   composer.addPass(new OutputPass());
   const grade = new ShaderPass(Grade);
   composer.addPass(grade);
   return {
-    ao, // the costly pass: main.js switches it off on slower GPUs
     setSize(w, h) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h); },
     render(time) {
       grade.uniforms.time.value = time % 10;

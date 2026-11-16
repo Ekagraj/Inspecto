@@ -1,11 +1,8 @@
 // Capture the current view and ask the local detector what it sees.
-import { DECOR_LAYER } from './house.js';
 
 /** Render one frame and grab it, plus a frozen copy of the camera for later raycasting. */
 export function capture({ renderer, scene, camera }, maxW = 768) {
-  camera.layers.disable(DECOR_LAYER); // the detector was trained on rooms without trim
   renderer.render(scene, camera); // same tick as the read, so the buffer is still valid
-  camera.layers.enable(DECOR_LAYER);
   const src = renderer.domElement, k = Math.min(1, maxW / src.width);
   const c = document.createElement('canvas');
   c.width = Math.round(src.width * k);
