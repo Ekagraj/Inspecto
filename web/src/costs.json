@@ -41,6 +41,18 @@
       "action": "Trace the source and check whether it is still wet. Fix the leak first, then replace damaged material and repaint.",
       "minor": [200, 600], "moderate": [600, 2500], "major": [2500, 8000]
     },
+    "scuff": {
+      "name": "Scuff / scrape", "measure": "length", "urgency": "monitor",
+      "cause": "Furniture, chair backs, bags or doors rubbing or knocking the wall. Usually cosmetic: the wall behind is normally sound.",
+      "action": "Clean light marks. Fill any gouges, sand, prime and repaint the patch, or the whole wall if the colour will not blend.",
+      "minor": [75, 200], "moderate": [150, 400], "major": [300, 800]
+    },
+    "hole": {
+      "name": "Hole / dent", "measure": "length", "urgency": "monitor",
+      "cause": "Impact from a door handle or furniture, or fixings that were pulled out. Larger holes can expose wiring or pipes inside the wall.",
+      "action": "Fill small dents and screw holes. Patch larger holes with new drywall, tape, skim and repaint.",
+      "minor": [100, 300], "moderate": [250, 600], "major": [500, 1500]
+    },
     "damaged_tile": {
       "name": "Damaged tile", "measure": "length", "urgency": "monitor",
       "cause": "Impact, movement in the surface underneath, or water getting behind the tiles.",

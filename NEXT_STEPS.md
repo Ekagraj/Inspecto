@@ -21,7 +21,7 @@ ARCHITECTURE.md) on every new screen.
 | 5. Report page | Sonnet | medium | done |
 | 5b. Check a real photo | Sonnet | medium | done (by Fable) |
 | 5c. Photo on a wall of the 3D home | Sonnet | medium | done (by Fable) |
-| 5d. More real photos and more defect types, then retrain | Fable | high | **in progress**: data being collected, NOT trained yet (see step 5d) |
+| 5d. More real photos and more defect types, then retrain | Fable | high | **data ready; the owner starts the training** (see step 5d), then check results |
 | 5e. Repair cost by location | Sonnet | medium | three-level test done on the photo page (see step 5e) |
 | 6. Training game mode | Sonnet | medium | |
 | 7. Evaluation script | Sonnet | medium | |
@@ -141,29 +141,44 @@ but called "water stain" at 52%. The model has no class for scuffs / impact dama
    label to a local folder, so their own photos become training data.
 4. `sh ml/retrain.sh`, then step 7's evaluation on real photos per class.
 
-Status 2026-11-16 evening. The owner asked: collect the data, do NOT train (the laptop was
-about to be switched off; they start training themselves later).
-- `python3 ml/get_more_data.py` downloads into `data/extra/commons/<class>/` and can be
-  re-run: it skips files it already has. If `data_extra.log` does not end with
-  "extra data: done", run it again (about 10 minutes; Wikimedia throttles faster downloads).
-  Wikimedia Commons photos of peeling paint and mold, CC0 / public domain / CC BY only
-  (`attribution.csv`; share-alike files are listed in `skipped.csv` and not downloaded, about
-  two thirds of what exists). Expect roughly 150 photos. Class per image, NO boxes.
-- NOT usable, ignore or delete (ask the owner before deleting, about 250 MB):
-  `data/extra/paint_defects/` (street views of whole buildings: graffiti and tiny marks, some
-  from Street View and stock sites, so the CC BY claim is doubtful) and
-  `data/extra/commons/water_seepage/` (6 files from a noisy category: ships, floods).
-- Still to do before training: (a) box the Commons photos by running the current detector at
-  a low threshold and keeping the image's own class, then look at a contact sheet; (b) add the
-  result to `ml/combine.py` sources. Not written yet. Until then `sh ml/retrain.sh` would
-  only repeat the last training on the same data: do not run it.
-- Honest size of the gain: about 150 peeling-paint / mold photos, nothing new for water
-  stains or scuffs. Not worth a 1.5 hour training on its own.
-- Searched and rejected: BD3 (about 4,000 photos with stain and peeling classes; no licence
-  stated, Kaggle account), Kasbah of Algiers set (224 px, no boxes), RF100 wall-damage
-  (classes are rotation levels). No free set with scuffs / chipped paint was found.
-- Best source not yet used: Roboflow Universe building-defect sets (CC BY 4.0, boxes). Needs
-  a free account and API key; the owner offered to sign up. Ask for the key as a file path.
+Status 2026-11-16 evening: **data is ready, training has NOT been run.** The owner starts it
+themselves when the laptop can stay on:
+
+    nohup caffeinate -is sh ml/train_more.sh > train_more.log 2>&1 &
+
+About 3 to 3.5 hours (6 rounds over 5,964 photos; laptop plugged in, lid open). It keeps the
+old model as `models/detector_before_extra.pth`. When `train_more.log` says
+"train_more: done": restart the API, run `node tests/detect-eval.mjs 3 20`, `tests/photo.mjs`
+and `tests/wallphoto.mjs`, record the numbers, and try the owner's scrape photo again.
+If results are worse, put the old model back (the copy command is in `ml/train_more.sh`).
+
+What was done:
+- The owner made a free Roboflow account; the API key is in `.roboflow_key` (git-ignored; it
+  was pasted in chat, so the owner should regenerate it). Downloading public datasets used no
+  credits. Never send the owner's workspace name anywhere.
+- `python3 ml/get_roboflow.py`: 8 public Roboflow Universe sets, all CC BY 4.0 with boxes,
+  633 MB, into `data/extra/roboflow/` (re-runnable; stops before 2 GB).
+- `uv run ml/prep_extra.py`: maps their classes onto ours, leaves out any image holding a class
+  we do not map, leaves out pictures we already have (224 were duplicates of our own data,
+  test set included), caps mold and cracks per source -> `data/extra/ready/` with 2,501
+  train and 592 valid photos. Samples of every source were looked at first.
+- Two NEW classes: `scuff` (scuffs / scrapes) and `hole` (holes / dents). Order is fixed in
+  `ml/classes.py` and `server/detector.py` (append only). `costs.json` has rows for both; their
+  price ranges are my own rough estimates like the rest of the table: tell the owner.
+- `ml/combine.py` now maps classes by name and adds `extra/ready` when it exists. Combined
+  train boxes: crack 3,208 | mold 2,748 | peeling_paint 2,052 | water_seepage 1,207 (was 42
+  real photos) | stairstep_crack 583 | scuff 440 | hole 245.
+- Checked: a 1-round dry run on 28 photos passed (RF-DETR grows the head from 5 to 7 classes
+  and keeps what it knew), and the server loads both 5-class and 7-class weights.
+- Each Roboflow set's own `test` split is unused: use them in step 7 for per-class numbers.
+- Scuff and hole data is thin (about 380 photos, some of them augmented copies). The owner's
+  own photos with corrected labels would be the best addition (not built yet).
+- Left on disk, unused, safe to delete if the owner agrees (they are wary of deletes, so ask):
+  `data/extra/paint_defects/` (250 MB, rejected: street views of whole buildings, doubtful
+  licence), `data/extra/commons/` (Wikimedia photos without boxes, small), `data/smoke7/` and
+  `models/smoke7/` (about 850 MB, the dry run).
+- Searched and rejected: BD3 (no licence stated), Kasbah of Algiers set (224 px, no boxes),
+  RF100 wall-damage (classes are rotation levels), the Hugging Face "paint defects" mirror.
 
 ### Step 5e: repair cost by location — three-level test done
 

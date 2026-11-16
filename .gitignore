@@ -8,3 +8,4 @@ models/
 *.pth
 test-results/
 *.log
+.roboflow_key

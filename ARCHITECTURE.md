@@ -231,4 +231,6 @@ Report precision, recall, F1 and support per class, plus AP50. Save
 | rfdetr + RF-DETR Nano weights, PyTorch, torchvision, Pillow, matplotlib, uvicorn | Apache 2.0 / BSD / HPND |
 | Ollama (MIT), Llama 3.2 3B weights | Llama 3.2 Community License (weights, not code) |
 | Defect images | CC BY 4.0 (Roboflow Universe `detr_crack_dataset`) |
+| Extra defect images (step 5d) | CC BY 4.0, Roboflow Universe: `dommages/batch1-yprx8`, `dommages/batch2-eunzt`, `scipublic/wall-6bnve`, `peumalab/wall-defects`, `assuralabs/av-water-damage`, `elaas-workspace/wall-defect-7fdkt-jpjpa`, `jq3/building_defect`, `building-fault-detection-and-diagnostics/paint-damage-det` |
+| Local price factors | Public domain (US Bureau of Labor Statistics, OEWS May 2025) |
 | Textures, furniture and sky HDRI (`ballawley_park`) | CC0 (Poly Haven) |
