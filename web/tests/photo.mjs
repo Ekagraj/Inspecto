@@ -60,7 +60,7 @@ await page.reload();
 await idle(3);
 check((await page.locator('.controls input[value="0.2"]').count()) === 1, 'photos and width survive a reload');
 
-await page.locator('.photo .controls button').first().click();
+await page.locator('.photo').first().locator('.controls button', { hasText: 'Remove' }).click();
 await idle(2);
 check(true, 'remove takes a photo out');
 [low, high] = await sums();
@@ -74,6 +74,15 @@ const merged = await page.evaluate(async () => (await import('/src/photo.js')).m
   { label: 'water_seepage', score: 0.4, box: [0, 0, 0.9, 0.6] }, { label: 'water_seepage', score: 0.6, box: [0.1, 0.1, 0.2, 0.2] },
   { label: 'crack', score: 0.5, box: [0.1, 0.1, 0.2, 0.2] }, { label: 'water_seepage', score: 0.5, box: [0.95, 0.9, 1, 1] }]));
 check(merged.length === 3 && merged[0].score === 0.6 && merged[0].box.join() === '0,0,0.9,0.6', 'a stain boxed twice is counted once; other types and separate spots are kept');
+
+// Any other format the browser cannot open (TIFF stands in for ProRAW .DNG) goes the same way.
+const tiff = `${out}/wall.tiff`;
+execFileSync('sips', ['-s', 'format', 'tiff', files[1], '--out', tiff]);
+await page.setInputFiles('.drop input', tiff);
+await idle(4);
+check(true, 'a TIFF is converted and analyzed');
+await page.locator('.photo').first().locator('.controls button', { hasText: 'Remove' }).click();
+await idle(3);
 
 await page.setInputFiles('.drop input', 'package.json');
 await page.waitForSelector('.status.error');

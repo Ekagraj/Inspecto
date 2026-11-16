@@ -5,6 +5,7 @@ import { createWalk } from './walk.js';
 import { loadDecals, plantDefects, clearDefects, visibleBoxes, randomPose, rng } from './defects.js';
 import { capture, detect } from './detect.js';
 import { createPins } from './pins.js';
+import { createWallPhoto } from './wallphoto.js';
 import { createMinimap } from './minimap.js';
 import { createFx } from './fx.js';
 import { DEFECTS, SEVERITY_COLOR, nameOf, money, totals } from './costs.js';
@@ -77,7 +78,9 @@ const card = $('#card'), chip = $('#chip'), status = $('#status'), summary = $('
 const minimap = createMinimap($('#minimap'));
 let openId = null, hover = null;
 
+const wall = createWallPhoto(app); // the owner's real photo, if they sent one from the photo page
 export const pins = createPins(app, {
+  source: (pos) => (wall.contains(pos) ? 'photo' : null),
   onChange(findings) {
     const t = totals(findings);
     if ($('#sum-n').textContent !== String(findings.length)) { // restart the count animation
@@ -101,7 +104,7 @@ function openCard(f) {
   $('#card-title').textContent = nameOf(f.label);
   $('#card-sev').textContent = f.severity;
   $('#card-sev').style.background = SEVERITY_COLOR[f.severity];
-  $('#card-where').textContent = `${f.roomName}, ${f.surface} (${f.material})`;
+  $('#card-where').textContent = `${f.roomName}, ${f.surface} (${f.material})${f.source === 'photo' ? ' · from your photo' : ''}`;
   $('#card-size').textContent = `${f.sizeM[0].toFixed(2)} × ${f.sizeM[1].toFixed(2)} m (${f.areaM2.toFixed(2)} m²)`;
   $('#card-score').textContent = `${Math.round(f.score * 100)}%`;
   $('#card-cost').textContent = `${money(f.cost.low)} – ${money(f.cost.high)} (estimate)`;
@@ -161,12 +164,28 @@ export async function analyze(source) {
 }
 $('#analyze').addEventListener('click', () => analyze());
 
+// --- The owner's wall photo ---
+const dropPhotoPins = () => pins.findings.filter((f) => f.source === 'photo').forEach((f) => pins.remove(f.id));
+function syncPhoto(message) {
+  $('#photo-remove').hidden = !wall.placed;
+  $('#hint-photo').hidden = !wall.has;
+  if (message) status.textContent = message;
+}
+$('#photo-remove').addEventListener('click', () => {
+  dropPhotoPins();
+  wall.remove();
+  syncPhoto('Photo removed');
+});
+syncPhoto();
+
 // --- Input ---
 const live = () => document.body.classList.contains('live');
 $('#enter').addEventListener('click', () => {
   walk.teleport(...SPAWN);
   document.body.classList.add('live');
+  $('#enter').blur(); // or the keys below would go to this button
   walk.lock();
+  if (wall.has && !wall.placed) status.textContent = 'Aim at a clear wall and press P to place your photo';
 });
 canvas.addEventListener('click', (e) => {
   if (!live()) return;
@@ -183,6 +202,11 @@ addEventListener('keydown', (e) => {
   else if (e.code === 'KeyE') { if (openId) closeCard(); else if (hover) openCard(hover); }
   else if (e.code === 'KeyX' && openId) pins.remove(openId);
   else if (e.code === 'Escape' && openId) closeCard();
+  else if (e.code === 'KeyP' && wall.has) {
+    const ok = wall.place(camera);
+    if (ok) dropPhotoPins(); // pins from the old spot would be left on a bare wall
+    syncPhoto(ok ? 'Photo placed · stand so it fills the view, then press Space' : 'Aim at a clear piece of wall, then press P');
+  }
 });
 
 // --- Frame loop ---
@@ -221,7 +245,7 @@ $('#enter-cta').textContent = 'Start inspection →';
 // Hooks for tests and tools.
 const truth = (shot) => visibleBoxes(shot.camera, app.planted, house.occluders).map((b) => ({ ...b, score: 0.9 }));
 window.inspecto = {
-  app, pins, teleport: walk.teleport, analyze, replant, rng,
+  app, pins, wall, teleport: walk.teleport, analyze, replant, rng,
   quality: () => level, // current LEVELS index chosen by the governor
   bake: async (o) => (await import('./bake.js')).bake(app, o), // dev tool, see tests/bake.mjs
   analyzeTruth: () => analyze(truth), // pin the ground-truth boxes instead of asking the detector

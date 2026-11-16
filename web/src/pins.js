@@ -41,7 +41,7 @@ function markerTexture(n, color) {
   return t;
 }
 
-export function createPins(app, { persist = true, onChange = () => {} } = {}) {
+export function createPins(app, { persist = true, onChange = () => {}, source = () => null } = {}) {
   const { scene, house } = app;
   const surfaces = new Set(house.surfaces);
   const group = new THREE.Group();
@@ -129,7 +129,7 @@ export function createPins(app, { persist = true, onChange = () => {} } = {}) {
         // A box cut off by the frame edge gives a shifted centre and a too-small size.
         const clipped = d.box[0] < 0.01 || d.box[1] < 0.01 || d.box[2] > 0.99 || d.box[3] > 0.99;
         const fresh = {
-          label, score: d.score, clipped, room: where.room.id, roomName: where.room.name, surface: where.surface, material: where.material,
+          label, score: d.score, clipped, source: source(loc.pos.toArray()), room: where.room.id, roomName: where.room.name, surface: where.surface, material: where.material,
           pos: loc.pos.toArray(), normal: loc.normal.toArray(), u: loc.u.toArray(), sizeM: [loc.w, loc.h], areaM2: loc.w * loc.h,
           severity, cost: costOf(label, severity), thumb: thumbnail(shot.canvas, d.box), ts: Date.now(),
         };

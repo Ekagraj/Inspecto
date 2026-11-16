@@ -20,8 +20,9 @@ ARCHITECTURE.md) on every new screen.
 | 4. Pinning findings in 3D | Fable | high | done |
 | 5. Report page | Sonnet | medium | done |
 | 5b. Check a real photo | Sonnet | medium | done (by Fable) |
-| 5c. Photo on a wall of the 3D home | Sonnet | medium | **next** (ask the owner first: they may prefer step 5d) |
-| 5d. More real stain photos, then retrain | Fable | high | proposed, not started |
+| 5c. Photo on a wall of the 3D home | Sonnet | medium | done (by Fable) |
+| 5d. More real photos and more defect types, then retrain | Fable | high | proposed: **ask the owner which of 5d / 5e is next** |
+| 5e. Repair cost by location | Sonnet | medium | proposed (owner's idea) |
 | 6. Training game mode | Sonnet | medium | |
 | 7. Evaluation script | Sonnet | medium | |
 | 7b. Realism pass + detector retrain | Fable | high | done (numbers in "Training status") |
@@ -42,6 +43,7 @@ error, best guess) and ask the owner to switch to Fable at high effort.
     cd web && node tests/shots.mjs <outDir>          # screenshots with post-processing
     cd web && node tests/report.mjs <outDir>         # report page: totals, offer maths, print, clearing
     cd web && node tests/photo.mjs <outDir>          # photo page: real photos, HEIC, totals, errors
+    cd web && node tests/wallphoto.mjs <outDir>      # real photo hung on a wall with P, analyzed, pinned
 
 Both servers may still be running from the previous session (`curl -s localhost:8000/api/health`).
 Tests run headless with software rendering at about 3 fps, so use generous timeouts.
@@ -111,37 +113,40 @@ Limits to tell the owner: the real training photos are 1,941 crack, 248 stairste
 real test set has only 5 seepage and 4 mold photos (too few to trust a score). Not tested
 with a genuine iPhone file (orientation of portrait HEICs is the thing to watch).
 
-### Step 5d (proposed): more real stain photos
+### Step 5c: photo on a wall of the 3D home — done
 
-The owner's stated goal is a model built on real stain images. Options, in order: find more
-permissively licensed water-stain / mold photos (ask before any download over 2 GB or any
-account), add the owner's own iPhone photos with boxes, then `sh ml/retrain.sh`.
+Photo page: "Place on a wall in the 3D home" saves `{image, widthM, aspect}` to
+`inspecto.wallphoto.v1` (`store.js`) and opens `/`. In the home, `P` hangs it where the
+crosshair meets a clear wall (`src/wallphoto.js`), `P` again moves it, "Remove your photo"
+takes it down. Placement survives a reload. Findings inside the photo get `source: 'photo'`
+("from your photo" in the card and report) and are dropped when the photo moves or goes.
+`tests/wallphoto.mjs` passes: a real water-stain photo, 1 m wide, was pinned at 0.99 x 0.70 m.
+Known limits: the photo is not clamped sideways (it can overhang a corner or a door), and it
+must fill most of the view to be detected (the capture is only 768 px wide).
+`/api/jpeg` now converts anything macOS can read (HEIC, ProRAW .DNG, TIFF), up to 100 MB.
+The owner said AirDrop gives ".DAV" files: not a photo format; probably .HEIC or .DNG. DNG
+itself is untested (no sample). Ask for the exact file name if one fails.
 
-## Exact next step: step 5c (confirm with the owner)
+### Step 5d (proposed): more real photos and more defect types
 
-### Step 5c: put the photo on a wall of the 3D home (owner's idea, build after 5b)
+The owner's first real photo (a wall at a university in New York) showed the gap: a
+horizontal scrape with chipped paint, probably from chair backs, was found in the right place
+but called "water stain" at 52%. The model has no class for scuffs / impact damage, and only
+42 seepage, 49 peeling-paint and 37 mold training photos against 1,941 cracks. Plan:
+1. Search for permissively licensed (CC BY / CC0 / MIT) datasets of water stains, mold,
+   peeling paint, and scuffs / dents / holes in drywall. Ask before any download over 2 GB or
+   any account. Report what exists before training.
+2. Add a "scuff / chipped paint" class (new row in `costs.json`, new label in the model).
+3. Let the owner correct a wrong label on the photo page and save the photo + box + corrected
+   label to a local folder, so their own photos become training data.
+4. `sh ml/retrain.sh`, then step 7's evaluation on real photos per class.
 
-Lets the owner test real wall photos inside the home, with real measurements.
+### Step 5e (proposed, owner's idea): repair cost by location
 
-- On the photo page: a "Width of the photographed area (m)" input (default 2) and a button
-  "Place on a wall in the home". Save `{image (JPEG data URL, max 1280 px), widthM, aspect}`
-  to `localStorage` key `inspecto.wallphoto.v1` (one photo at a time is enough; wrap in
-  try/catch for quota) and go to `/`.
-- In the app (inspection mode): if a saved photo exists, show a chip "Aim at a wall and press
-  P to place your photo". On `P`, raycast from the crosshair against `house.surfaces` (walls
-  only, `|normal.y| < 0.5`), then add a quad of `widthM x widthM / aspect` 3 mm off the wall,
-  centred on the hit, clamped to stay between floor and ceiling. Use `MeshBasicMaterial`
-  with the photo as `map` (unlit: a photo carries its own lighting). `P` again moves it;
-  a "Remove photo" button deletes it and its storage key.
-- Do NOT add the quad to `house.surfaces` or `house.occluders`: pin rays must pass through
-  it and land on the wall behind, which is what makes room, surface and size work unchanged.
-- Analyze, pins, sizes, costs and the report then work as they are. Mark findings whose pin
-  lies inside the photo quad with `source: 'photo'` and label them "from your photo" in the
-  detail card and the report.
-- Test: place a `data/test` image on a living-room wall via a `window.inspecto` hook, analyze
-  from 1.5 m straight on, expect at least one pinned finding with a plausible size. Screenshot.
-- Say on the page: this checks your wall, not your room layout; measurements depend on the
-  width you enter; straight-on photos work best.
+A city or ZIP input (photo page and report) that scales the cost ranges. Needs a free,
+public-domain source for the multiplier (US BLS wage data for painters / drywall installers
+by metro area is the first thing to check); never invent the numbers. WhatsApp strips GPS
+from photos, so the location must be typed, not read from the image.
 
 ## Notes for step 6 (training game)
 

@@ -4,6 +4,7 @@ import './report.css';
 import './photo.css';
 import { h, safeImg } from './dom.js';
 import { detect } from './detect.js';
+import { saveWallPhoto } from './store.js';
 import { DEFECTS, COST_NOTE, SEVERITY_COLOR, nameOf, money, severityOf, costOf, totals } from './costs.js';
 
 const KEY = 'inspecto.photos.v1';
@@ -48,10 +49,8 @@ export function merge(dets) {
 }
 
 async function decode(file) {
-  try { return await createImageBitmap(file); } catch (e) {
-    if (!/hei[cf]/i.test(file.type) && !/\.hei[cf]$/i.test(file.name)) throw e;
-  }
-  // iPhone HEIC: only Safari can read it, so the local server converts it.
+  try { return await createImageBitmap(file); } catch { /* not a format this browser reads */ }
+  // iPhone HEIC or ProRAW (.DNG), TIFF and so on: the local server converts what macOS can read.
   const res = await fetch('/api/jpeg', { method: 'POST', body: file });
   if (!res.ok) throw new Error('could not convert');
   return createImageBitmap(await res.blob());
@@ -78,7 +77,7 @@ async function addFiles(files) {
     try {
       bmp = await decode(file);
     } catch {
-      problems.push(`"${file.name}" is not an image that could be read (use JPEG, PNG or an iPhone HEIC photo).`);
+      problems.push(`"${file.name}" is not an image that could be read (JPEG, PNG and iPhone HEIC or DNG photos work).`);
       continue;
     }
     let detections;
@@ -110,6 +109,7 @@ function notice() {
     'Use a close-up, straight-on photo of the damaged area: wide room shots miss things. ',
     'The size of each problem is worked out from the width you enter under the photo, so check it. ',
     'Every photo is priced on its own, so do not add the same damage twice. ',
+    'Placing a photo in the 3D home checks your wall, not your room layout. ',
     `${COST_NOTE} Photos are analyzed on this laptop and never uploaded.`);
 }
 
@@ -127,7 +127,7 @@ function hero(found) {
 }
 
 function drop() {
-  const input = h('input', { type: 'file', accept: 'image/*,.heic,.heif', multiple: '', disabled: busy, 'aria-label': 'Add wall photos' });
+  const input = h('input', { type: 'file', accept: 'image/*,.heic,.heif,.dng', multiple: '', disabled: busy, 'aria-label': 'Add wall photos' });
   input.addEventListener('change', () => addFiles(input.files));
   return h('label', { class: `drop panel ticks${busy ? ' busy' : ''}` },
     input,
@@ -177,6 +177,11 @@ function card(p) {
       h('div', { class: 'controls' },
         h('label', { for: `w${p.n}`, class: 'label', text: 'Width of the area in this photo' }),
         width, h('span', { class: 'label', text: 'metres' }),
+        h('button', { class: 'ghost', text: 'Place on a wall in the 3D home', onclick: () => {
+          if (saveWallPhoto({ image: p.thumb, widthM: p.widthM, aspect: p.aspect })) { location.href = '/'; return; }
+          status = { text: 'Browser storage is full, so the photo could not be sent to the 3D home. Remove some photos first.', error: true };
+          render();
+        } }),
         h('button', { class: 'ghost', text: 'Remove', onclick: () => { photos = photos.filter((x) => x !== p); save(); render(); } }))));
 }
 

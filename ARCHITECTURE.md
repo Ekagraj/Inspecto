@@ -134,6 +134,7 @@ web/
   src/report.js    report page
   src/photo.js     real-photo check: upload, detect, merge duplicate boxes, verdict, running total
   src/dom.js       h() DOM helper shared by report and photo pages
+  src/wallphoto.js the owner's real photo hung on a wall (P key); findings in it get source 'photo'
   src/game.js      timer, flagging, client chat, scoring
   public/decals/   *.png + decals.json
   public/textures/ public/models/   CC0 Poly Haven assets
@@ -158,7 +159,7 @@ Run: `uv run uvicorn server.app:app --port 8000` and `npm --prefix web run dev`.
 ## Contracts
 
 ```
-POST /api/jpeg    raw HEIC bytes -> JPEG (macOS `sips`; iPhone photos in non-Safari browsers)
+POST /api/jpeg    raw image bytes (HEIC, DNG, TIFF) -> JPEG via macOS `sips`, for formats the browser cannot read
 POST /api/detect  {image: "<jpeg data URL>"}
   -> {detections: [{label, score, box: [x1,y1,x2,y2]}], ms}     box is 0..1, y down
 POST /api/client/question {room, found: [label...], asked: [topic...]}

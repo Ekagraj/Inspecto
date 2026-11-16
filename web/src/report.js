@@ -111,7 +111,8 @@ function item(f) {
       h('div', { class: 'meta' },
         h('span', { text: `${f.surface} · ${f.material}` }),
         h('span', { text: `${f.sizeM[0].toFixed(2)} × ${f.sizeM[1].toFixed(2)} m` }),
-        h('span', { text: `confidence ${Math.round(f.score * 100)}%` })),
+        h('span', { text: `confidence ${Math.round(f.score * 100)}%` }),
+        f.source === 'photo' ? h('span', { text: 'from your photo' }) : null),
       d.cause ? h('p', {}, h('b', { text: 'Likely cause. ' }), d.cause) : null,
       d.action ? h('p', {}, h('b', { text: 'What to do. ' }), d.action) : null,
       urgent ? h('span', { class: 'flag', text: 'Get a specialist quote before offering' }) : null));

@@ -44,17 +44,17 @@ def detect(body: DetectIn):
 
 @app.post("/api/jpeg")
 async def to_jpeg(request: Request):
-    """iPhone HEIC photo -> JPEG, for browsers that cannot read HEIC (everything but Safari)."""
+    """Any image macOS can read (iPhone HEIC, ProRAW .DNG, TIFF) -> JPEG, for browsers that cannot."""
     data = await request.body()
-    if len(data) > 40 * 1024 * 1024:
+    if len(data) > 100 * 1024 * 1024:  # a 48 MP ProRAW file is about 75 MB
         raise HTTPException(413, "image too large")
     # shortcut: sips ships with macOS only; use pillow-heif if this ever runs on another system.
     with tempfile.TemporaryDirectory() as d:
-        src, out = Path(d, "in.heic"), Path(d, "out.jpg")
+        src, out = Path(d, "in"), Path(d, "out.jpg")  # sips reads the type from the content
         src.write_bytes(data)
         try:
             subprocess.run(["sips", "-s", "format", "jpeg", "-Z", "1600", str(src), "--out", str(out)],
-                           check=True, capture_output=True, timeout=30)
+                           check=True, capture_output=True, timeout=60)
             return Response(out.read_bytes(), media_type="image/jpeg")
         except Exception:
             raise HTTPException(400, "could not convert this image")
