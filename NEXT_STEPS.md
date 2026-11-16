@@ -63,7 +63,8 @@ these views reuse training decals, so they flatter the model):
 | **all** | **88%** | **85%** (91% of 67 located ignoring the label) |
 
 Before the retrain (old look, mid-run weights): precision 70%, recall 65%. Weak spot now:
-`peeling_paint` is over-called (6 false positives), mostly on `water_seepage`.
+`peeling_paint` is over-called (6 false positives); probably the same mix-up with
+`water_seepage` as before (it has 5 misses), but that was not confirmed.
 To retrain again (only if geometry, furniture or lights change): rebake, then
 `nohup sh ml/retrain.sh > retrain.log 2>&1 &` (about 1.5 hours). While it renders (until
 `retrain.log` shows the "160 images" line) do not edit `web/src` or `web/public`: Vite
