@@ -21,9 +21,11 @@ ARCHITECTURE.md) on every new screen.
 | 5. Report page | Sonnet | medium | **next** |
 | 6. Training game mode | Sonnet | medium | |
 | 7. Evaluation script | Sonnet | medium | |
+| 7b. Realism pass + detector retrain | **Fable** | high | requested by owner, see "Step 7b" |
 | 8. README and final graphify run | Sonnet | low | |
 
-Handoffs: before step 8 ask for `/effort low`. Format:
+Handoffs: after step 7 -> "HANDOFF: run /model fable and /effort high" for step 7b; after 7b
+-> Sonnet at `/effort low` for step 8 (so README screenshots show the final look). Format:
 "HANDOFF: run /model <model> and /effort <level>, then say 'continue from NEXT_STEPS.md'."
 Escalation: same problem unfixed after 2 attempts -> write it here (what was tried, the
 error, best guess) and ask the owner to switch to Fable at high effort.
@@ -138,6 +140,36 @@ support at IoU 0.5 and the app threshold (0.4), plus AP50. Save `results/eval.cs
 `results/eval.md`, `results/eval.png` (matplotlib bar chart in the app's colours). Also
 paste the in-app numbers from `detect-eval.mjs` into `results/eval.md` and say clearly that
 those views reuse training decals. SDNET2018 is optional.
+
+## Step 7b: realism pass (Fable, high) — owner wants the home to look realistic
+
+Report-page status when this was written: `web/report.html`, `web/src/report.css` and
+`web/src/report.js` are written but NOT yet run through a test; `tests/report.mjs` does not
+exist yet. Finish and test step 5 first (and 5b, 6, 7).
+
+Goal: photoreal-ish interior, still fast on the owner's M3 / 16 GB. Decide the approach, but
+respect these constraints (all measured or decided earlier):
+
+- Performance: effects at retina resolution ran at 5 fps, plain at 50 fps (training running).
+  Keep the quality governor (`LEVELS`, `govern` in `main.js`); realism must be mostly
+  baked or cheap at runtime. Prefer baked lightmaps / baked AO over runtime GI or shadows.
+  Re-measure with `cd web && node tests/perf.mjs "?fx=auto"` on the real GPU.
+- Memory: 16 GB shared with everything. Textures 2k at most, keep `web/public` under about
+  150 MB, glTF models with compressed textures where possible.
+- Free and legal: CC0 (Poly Haven) assets only, or generated. Blender (free, GPL) may be used
+  as an offline tool for baking (`brew install --cask blender`, about 300 MB; no account),
+  but ask the owner before any download over 2 GB or any signup. Real scan datasets
+  (Matterport3D, ScanNet, HM3D) need a signed access form and are huge: do not use.
+- The detector is trained on today's look. After any visual change that touches walls,
+  floors or lighting: re-render training views (`web/tests/synth.mjs`), `ml/combine.py`,
+  continue training (`ml/train.py --weights ... --epochs 4`, batch 4, one training at a time),
+  then `node tests/detect-eval.mjs 3 20` and `node tests/pins.mjs` must still pass.
+- Defects must stay visible and detectable: nothing may cover or tint a planted decal
+  (`DECOR_LAYER` rule in ARCHITECTURE.md), and decals must be lit like the wall under them
+  (multiply blending over baked light is fine; re-check it looks right).
+- Verify on the real GPU with headless Chrome (`--use-angle=metal`, see `tests/perf.mjs`),
+  not software rendering, and Read the screenshots.
+- Update ARCHITECTURE.md "Look and feel" with what changed.
 
 ## Known issues
 
