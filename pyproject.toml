@@ -1,0 +1,5 @@
+[project]
+name = "ai-home-inspector"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = ["rfdetr[train]>=1.12", "fastapi", "uvicorn", "pillow", "matplotlib"]

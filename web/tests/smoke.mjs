@@ -30,6 +30,19 @@ await page.keyboard.up('KeyW');
 const z = await page.evaluate(() => window.inspecto.app.camera.position.z);
 if (z < 0.25 || z > 0.6) errors.push(`collision check failed: z=${z}`);
 
+// Stand in front of the first wall defect and analyze the view.
+const pose = await page.evaluate(() => {
+  const d = window.inspecto.planted().find((d) => d.surface === 'wall');
+  const x = d.pos[0] + d.normal[0] * 1.8, z = d.pos[2] + d.normal[2] * 1.8;
+  return [x, z, Math.atan2(d.normal[0], d.normal[2]), Math.atan2(d.pos[1] - 1.6, 1.8)];
+});
+await page.evaluate((p) => window.inspecto.teleport(...p), pose);
+await page.waitForTimeout(300);
+const dets = await page.evaluate(() => window.inspecto.analyze());
+console.log('detections:', JSON.stringify(dets.map((d) => [d.label, d.score])));
+await page.screenshot({ path: `${out}/analyze.png` });
+if (!dets.length) errors.push('no detections in front of a planted defect');
+
 await browser.close();
 if (errors.length) { console.error(errors.join('\n')); process.exit(1); }
 console.log('smoke ok');

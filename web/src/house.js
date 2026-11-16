@@ -150,6 +150,7 @@ export function buildHouse(scene) {
     g.position.set(...win.pos);
     g.lookAt(win.pos[0] + win.normal[0], win.pos[1], win.pos[2] + win.normal[2]);
     scene.add(g);
+    g.traverse((o) => o.isMesh && occluders.push(o));
   }
 
   // Bathroom fixtures: no CC0 models at hand, so plain primitives.

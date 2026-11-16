@@ -11,8 +11,8 @@ commit and update this file after every step.
 |---|---|---|---|
 | 1. Machine check and architecture plan | Fable | high | done |
 | 2. Load scene with walk controls | Fable | medium | done |
-| 3. Defect detection pipeline | Fable | medium | **next** |
-| 4. Pinning findings in 3D | Fable | high | |
+| 3. Defect detection pipeline | Fable | medium | done (final weights still training) |
+| 4. Pinning findings in 3D | Fable | high | **next** |
 | 5. Report page | Sonnet | medium | |
 | 6. Training game mode | Sonnet | medium | |
 | 7. Evaluation script | Sonnet | medium | |
@@ -29,23 +29,33 @@ the error, best guess) and ask the owner to switch to Fable at high effort.
 - Step 1: machine checked, plan written (ARCHITECTURE.md), git repo started.
 - Step 2: `web/` Vite app. `house.js` builds the 5-room apartment (exports `ROOMS`, `WINDOWS`, `roomAt(x,z)`, `describeHit(point, normal)`, `buildHouse(scene)` -> `{surfaces, occluders, colliders, ready}`). `walk.js` has look/WASD/collision. `window.inspecto = {app, teleport(x,z,yaw,pitch), ready}`. Smoke test passes headless.
 
-## Exact next step: step 3 (detection pipeline)
+- Step 3: data in `data/` (`uv run ml/get_data.py`), decals (`ml/make_decals.py` -> `web/public/decals`), `web/src/defects.js` (`plantDefects`, `visibleBoxes`, `randomPose`), `web/src/detect.js` (`capture`, `detect`), Analyze button + Space key in `main.js` (fires `inspecto:detections` with `{dets, shot}`; `shot.camera` is the frozen camera), server (`server/app.py`, `server/detector.py`), rendered training views (`web/tests/synth.mjs` -> `data/synth`), `ml/combine.py` -> `data/combined`, `ml/train.py`.
 
-See the notes below. Dev server: `npm --prefix web run dev`; test: `cd web && node tests/smoke.mjs <outDir>`.
+## Training status (check first)
 
-## Notes for step 3
+A 5-epoch run on real + rendered views was started 2026-11-16 12:01 in the background
+(`models/run`, log `train.log`, about 18 min per epoch). `models/detector.pth` is
+currently the 1-epoch real-only trial checkpoint, which finds nothing in rendered views.
+When `models/run/checkpoint_best_total.pth` exists and `pgrep -f ml/train.py` is empty:
 
-- Data: `hf download senthilsk/crack_detection_dataset --repo-type dataset`
-  (zips in `data/`: train, valid, test). Check the annotation format inside the
-  zips; RF-DETR wants `train/ valid/ test/` each with `_annotations.coco.json`.
-- Training: `RFDETRNano().train(dataset_dir, epochs, batch_size=4,
-  grad_accum_steps=4, lr=1e-4, output_dir="models/")`; best weights land in
-  `checkpoint_best_total.pth`. Read the current rfdetr docs first
-  (https://rfdetr.roboflow.com). Run training in the background and build the
-  server and decals meanwhile. If MPS fails, set `PYTORCH_ENABLE_MPS_FALLBACK=1`,
-  then fall back to CPU with fewer epochs.
-- Step 3 must also produce decals and plant a fixed set in the home, otherwise
-  there is nothing to detect.
+    cp models/run/checkpoint_best_total.pth models/detector.pth
+    # restart the server, then: cd web && node tests/smoke.mjs <outDir>   (must print detections)
+
+If in-app recall is still poor: train more epochs with
+`uv run ml/train.py --weights models/run/checkpoint_best_total.pth --epochs 4 --out models/run2`.
+Training memory: batch 4 holds about 5 GB. Never raise the batch size or worker count
+(a batch-8 run hit 12 GB and pushed the laptop into swap).
+
+## Exact next step: step 4 (pin findings in 3D)
+
+Follow "Pinning" in ARCHITECTURE.md. New file `web/src/pins.js`, listening to
+`inspecto:detections`. While the detector is still training, test with ground-truth
+boxes: `visibleBoxes(shot.camera, app.planted, house.occluders)` gives boxes in the same
+format as detections. Add `web/src/costs.json` + `costs.js` (severity and cost range)
+and `store.js` (localStorage `inspecto.findings.v1`), since the detail card shows cost.
+
+Run: `uv run uvicorn server.app:app --port 8000` and `npm --prefix web run dev`.
+Test: `cd web && node tests/smoke.mjs <outDir>` (needs both running).
 
 ## Known issues
 
