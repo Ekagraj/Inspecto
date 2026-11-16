@@ -124,6 +124,30 @@ The owner asked how the app is useful for a real home. Answer: let them upload a
 - Test with 3 images from `data/test` (real photos the model never trained on) and screenshot.
 - "Damaged tile" cannot be inferred from a photo (no surface data); leave cracks as cracks.
 
+### Step 5c: put the photo on a wall of the 3D home (owner's idea, build after 5b)
+
+Lets the owner test real wall photos inside the home, with real measurements.
+
+- On the photo page: a "Width of the photographed area (m)" input (default 2) and a button
+  "Place on a wall in the home". Save `{image (JPEG data URL, max 1280 px), widthM, aspect}`
+  to `localStorage` key `inspecto.wallphoto.v1` (one photo at a time is enough; wrap in
+  try/catch for quota) and go to `/`.
+- In the app (inspection mode): if a saved photo exists, show a chip "Aim at a wall and press
+  P to place your photo". On `P`, raycast from the crosshair against `house.surfaces` (walls
+  only, `|normal.y| < 0.5`), then add a quad of `widthM x widthM / aspect` 3 mm off the wall,
+  centred on the hit, clamped to stay between floor and ceiling. Use `MeshBasicMaterial`
+  with the photo as `map` (unlit: a photo carries its own lighting). `P` again moves it;
+  a "Remove photo" button deletes it and its storage key.
+- Do NOT add the quad to `house.surfaces` or `house.occluders`: pin rays must pass through
+  it and land on the wall behind, which is what makes room, surface and size work unchanged.
+- Analyze, pins, sizes, costs and the report then work as they are. Mark findings whose pin
+  lies inside the photo quad with `source: 'photo'` and label them "from your photo" in the
+  detail card and the report.
+- Test: place a `data/test` image on a living-room wall via a `window.inspecto` hook, analyze
+  from 1.5 m straight on, expect at least one pinned finding with a plausible size. Screenshot.
+- Say on the page: this checks your wall, not your room layout; measurements depend on the
+  width you enter; straight-on photos work best.
+
 ## Notes for step 6 (training game)
 
 - Start screen: un-hide `#enter-game` and wire it. Set `#mode` text to "Training".
