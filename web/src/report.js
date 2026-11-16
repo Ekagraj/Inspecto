@@ -1,6 +1,7 @@
 // Report page: findings grouped by room, repair-cost range and a suggested offer adjustment.
 import './style.css';
 import './report.css';
+import { h, safeImg } from './dom.js';
 import { loadFindings, saveFindings } from './store.js';
 import { DEFECTS, COST_NOTE, SEVERITY_COLOR, nameOf, money, totals } from './costs.js';
 
@@ -8,21 +9,8 @@ const ROOM_ORDER = ['living', 'kitchen', 'hall', 'bedroom', 'bath'];
 const ASKING_KEY = 'inspecto.asking.v1';
 const SEV_RANK = { major: 0, moderate: 1, minor: 2 };
 
-/** Tiny DOM helper. Text always goes in as text nodes, never as HTML. */
-function h(tag, attrs = {}, ...kids) {
-  const el = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    if (k === 'class') el.className = v;
-    else if (k === 'text') el.textContent = v;
-    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
-    else if (v !== false && v != null) el.setAttribute(k, v);
-  }
-  el.append(...kids.flat().filter((c) => c != null && c !== false));
-  return el;
-}
 const label = (t) => h('span', { class: 'label', text: t });
 const range = (c) => `${money(c.low)} – ${money(c.high)}`;
-const safeImg = (src) => (typeof src === 'string' && src.startsWith('data:image/') ? src : '');
 
 function readAsking() {
   try { return Math.max(0, Number(localStorage.getItem(ASKING_KEY)) || 0); } catch { return 0; }
@@ -42,6 +30,7 @@ function header() {
     h('a', { class: 'logo', href: '/', text: 'Inspecto' }),
     label(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })),
     h('a', { class: 'btn', href: '/', text: '← Back to the home' }),
+    h('a', { class: 'btn', href: '/photo.html', text: 'Check a photo' }),
     h('button', { class: 'ghost', text: 'Print / save PDF', onclick: () => window.print() }));
 }
 

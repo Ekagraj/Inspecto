@@ -1,0 +1,28 @@
+/* Photo check page. Builds on report.css (.wrap, .bar, .notice, .hero, .stats, .item, .flag). */
+.drop { display: block; margin: 28px 0 0; padding: 34px 24px; text-align: center; cursor: pointer; border-style: dashed; transition: border-color 0.2s, background 0.2s; }
+.drop:hover, .drop:focus-within, body.dragging .drop { border-color: var(--amber); background: rgba(255, 178, 36, 0.08); }
+.drop.busy { cursor: progress; opacity: 0.6; }
+.drop strong { display: block; font: 400 34px/1.1 var(--serif); }
+.drop span { display: block; margin: 8px auto 0; max-width: 52ch; font-size: 13px; line-height: 1.5; color: var(--muted); }
+.drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+
+.status { margin: 16px 0 0; font: 500 13px/1.5 var(--mono); color: var(--muted); }
+.status.error { color: var(--red); }
+
+.photos { display: grid; gap: 14px; margin-top: 28px; }
+.photo { grid-template-columns: minmax(0, 400px) 1fr; }
+.photo .shot { position: relative; align-self: start; overflow: hidden; }
+.photo .shot img { height: auto; min-height: 0; border: 0; }
+/* Label inside the box: close-ups often fill the frame, and a label above it would leave the card. */
+.photo .box::before { bottom: auto; top: 0; }
+.photo .body > p { margin-top: 10px; }
+
+.det { padding: 12px 0 8px; border-top: 1px solid var(--line); }
+.det .head b { font: 400 21px/1 var(--serif); }
+.controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 4px; padding-top: 12px; border-top: 1px solid var(--line); }
+.controls input { width: 76px; padding: 8px; font: 500 14px var(--mono); color: var(--paper); background: rgba(0, 0, 0, 0.25); border: 1px solid var(--line); }
+.controls button { margin-left: auto; padding: 8px 12px; }
+
+@media (max-width: 760px) {
+  .photo { grid-template-columns: 1fr; }
+}

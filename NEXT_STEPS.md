@@ -19,7 +19,9 @@ ARCHITECTURE.md) on every new screen.
 | 3. Defect detection pipeline | Fable | medium | done (final weights: see "Training status") |
 | 4. Pinning findings in 3D | Fable | high | done |
 | 5. Report page | Sonnet | medium | done |
-| 5b. Check a real photo, 5c. photo on a wall | Sonnet | medium | **next** |
+| 5b. Check a real photo | Sonnet | medium | done (by Fable) |
+| 5c. Photo on a wall of the 3D home | Sonnet | medium | **next** (ask the owner first: they may prefer step 5d) |
+| 5d. More real stain photos, then retrain | Fable | high | proposed, not started |
 | 6. Training game mode | Sonnet | medium | |
 | 7. Evaluation script | Sonnet | medium | |
 | 7b. Realism pass + detector retrain | Fable | high | done (numbers in "Training status") |
@@ -39,6 +41,7 @@ error, best guess) and ask the owner to switch to Fable at high effort.
     cd web && node tests/detect-eval.mjs 3 20        # in-app detector precision/recall
     cd web && node tests/shots.mjs <outDir>          # screenshots with post-processing
     cd web && node tests/report.mjs <outDir>         # report page: totals, offer maths, print, clearing
+    cd web && node tests/photo.mjs <outDir>          # photo page: real photos, HEIC, totals, errors
 
 Both servers may still be running from the previous session (`curl -s localhost:8000/api/health`).
 Tests run headless with software rendering at about 3 fps, so use generous timeouts.
@@ -86,26 +89,35 @@ Training memory: batch 4 holds about 5 GB. Never raise the batch size or worker 
   detail card, minimap, post-processing, new visual design. Pin test: median position error
   1.7 cm, no duplicates, no wrong rooms across 6 random homes.
 
-## Exact next step: step 5b, then 5c
+## Step 5b: check real photos — done
 
-### Step 5b: check a real photo (added at the owner's request)
+`web/photo.html` + `src/photo.js` + `src/photo.css`, linked from the start screen ("03 — Your
+photos") and the report. The owner's words: "give an image of the real wall, the app says if
+it is a real stain issue or a small fix, and keeps adding the price as new pics are added".
 
-The owner asked how the app is useful for a real home. Answer: let them upload a photo.
+- Add photos by file picker or drop. Each is shrunk to 1280 px and sent to `/api/detect`.
+  iPhone HEIC files are converted by the new `POST /api/jpeg` (macOS `sips`), because only
+  Safari reads HEIC. A 12 MP HEIC is part of the test.
+- Overlapping boxes of the same type are merged (`merge`), so one stain is priced once.
+- Verdict per problem: small fix / needs repair / serious issue = `severityOf` on the real
+  size, which is box size x "width of the area in this photo" (per-photo input, default 1 m).
+  The verdict is size + defect type from `costs.json`; it is NOT learned from the image.
+- Running total (hero) over all photos, saved in `localStorage` key `inspecto.photos.v1`
+  (800 px thumbnails; about 35 photos fit). Remove per photo.
+- `tests/photo.mjs` passes (15 checks) on three `data/test` photos: all three were detected.
 
-- New Vite entry `web/photo.html` + `web/src/photo.js` (add it to `vite.config.js` inputs),
-  linked from the start screen as a third mode card ("03 — Your photo") and from the report.
-- File input + drag-and-drop. Downscale in a canvas to max 1280 px, send the JPEG data URL to
-  the existing `POST /api/detect` (no server change needed). Never upload anywhere else.
-- Draw the boxes over the photo (reuse the `.box` bracket style) and list each detection:
-  name, confidence, cause, action, and the cost range. A flat photo has no scale, so size
-  cannot be measured: show a minor / moderate / major selector per detection (default
-  moderate) and `costOf(label, severity)`; show the total for the photo.
-- State plainly on the page: works best on a close-up of the damaged area (the training
-  photos are close-ups), wide room shots will miss things, and it is visual triage only.
-- Empty and error states: no detections ("nothing found, try a closer photo"), detector
-  offline, non-image file.
-- Test with 3 images from `data/test` (real photos the model never trained on) and screenshot.
-- "Damaged tile" cannot be inferred from a photo (no surface data); leave cracks as cracks.
+Limits to tell the owner: the real training photos are 1,941 crack, 248 stairstep crack,
+49 peeling paint, 42 water seepage, 37 mold images, so stains are thinly covered and the
+real test set has only 5 seepage and 4 mold photos (too few to trust a score). Not tested
+with a genuine iPhone file (orientation of portrait HEICs is the thing to watch).
+
+### Step 5d (proposed): more real stain photos
+
+The owner's stated goal is a model built on real stain images. Options, in order: find more
+permissively licensed water-stain / mold photos (ask before any download over 2 GB or any
+account), add the owner's own iPhone photos with boxes, then `sh ml/retrain.sh`.
+
+## Exact next step: step 5c (confirm with the owner)
 
 ### Step 5c: put the photo on a wall of the 3D home (owner's idea, build after 5b)
 

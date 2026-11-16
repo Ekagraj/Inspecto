@@ -25,8 +25,8 @@ session does have these tools, use them instead.
 ## Decisions
 
 1. **Frontend: Vite + vanilla JS (ES modules) + three.js.** No UI framework: the UI
-   is a HUD, two panels and a report page. Two HTML entry points: `index.html`
-   (inspection + game) and `report.html`.
+   is a HUD, two panels and a report page. Three HTML entry points: `index.html`
+   (inspection + game), `report.html` and `photo.html` (check real wall photos).
 2. **Home scene: generated procedurally**, not scanned. A floor plan in data
    (5 rooms: living room, kitchen, hallway, bedroom, bathroom, about 10 × 8 m) is
    built into box walls, floors and ceilings, textured with CC0 Poly Haven materials
@@ -119,7 +119,7 @@ all lighting is baked and costs nothing per frame.
 
 ```
 web/
-  index.html  report.html  vite.config.js   (dev proxy /api -> :8000)
+  index.html  report.html  photo.html  vite.config.js   (dev proxy /api -> :8000)
   src/main.js      boot, mode switch, HUD
   src/house.js     floor plan data + builder, roomAt(), surfaces list
   src/walk.js      pointer-lock look, WASD, circle-vs-wall collision
@@ -132,6 +132,8 @@ web/
   src/costs.js     costs.json lookup, severity, totals
   src/store.js     localStorage
   src/report.js    report page
+  src/photo.js     real-photo check: upload, detect, merge duplicate boxes, verdict, running total
+  src/dom.js       h() DOM helper shared by report and photo pages
   src/game.js      timer, flagging, client chat, scoring
   public/decals/   *.png + decals.json
   public/textures/ public/models/   CC0 Poly Haven assets
@@ -156,6 +158,7 @@ Run: `uv run uvicorn server.app:app --port 8000` and `npm --prefix web run dev`.
 ## Contracts
 
 ```
+POST /api/jpeg    raw HEIC bytes -> JPEG (macOS `sips`; iPhone photos in non-Safari browsers)
 POST /api/detect  {image: "<jpeg data URL>"}
   -> {detections: [{label, score, box: [x1,y1,x2,y2]}], ms}     box is 0..1, y down
 POST /api/client/question {room, found: [label...], asked: [topic...]}
