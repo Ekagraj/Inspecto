@@ -14,6 +14,7 @@ const $ = (s) => document.querySelector(s);
 const canvas = $('#view');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
 
 const scene = new THREE.Scene();
 scene.backgroundIntensity = 1.5; // the park outside reads as bright daylight

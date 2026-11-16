@@ -18,14 +18,13 @@ ARCHITECTURE.md) on every new screen.
 | 2. Load scene with walk controls | Fable | medium | done |
 | 3. Defect detection pipeline | Fable | medium | done (final weights: see "Training status") |
 | 4. Pinning findings in 3D | Fable | high | done |
-| 5. Report page | Sonnet | medium | **next** |
+| 5. Report page | Sonnet | medium | **next** (files written, never run: write `tests/report.mjs`, test, fix) |
 | 6. Training game mode | Sonnet | medium | |
 | 7. Evaluation script | Sonnet | medium | |
-| 7b. Realism pass + detector retrain | **Fable** | high | requested by owner, see "Step 7b" |
+| 7b. Realism pass + detector retrain | Fable | high | done early (look is final; retrain running, see "Training status") |
 | 8. README and final graphify run | Sonnet | low | |
 
-Handoffs: after step 7 -> "HANDOFF: run /model fable and /effort high" for step 7b; after 7b
--> Sonnet at `/effort low` for step 8 (so README screenshots show the final look). Format:
+Handoffs: before step 8 ask for `/effort low`. Format:
 "HANDOFF: run /model <model> and /effort <level>, then say 'continue from NEXT_STEPS.md'."
 Escalation: same problem unfixed after 2 attempts -> write it here (what was tried, the
 error, best guess) and ask the owner to switch to Fable at high effort.
@@ -45,22 +44,32 @@ Look at screenshots (Read the PNG) after every UI change.
 
 ## Training status (do this first)
 
-A 5-epoch run on real + rendered views started 2026-11-16 12:01 (`models/run`, log
-`train.log`, about 18 min per epoch, should end around 13:35). Validation mAP50 so far:
-0.44 (trial) -> 0.67 -> 0.73. `models/detector.pth` is currently a copy of the mid-run
-`checkpoint_best_ema.pth`; with it the in-app check gave precision 70%, recall 65%
-(78% located ignoring the label; `water_seepage` is often called `peeling_paint`).
+The home's look changed in step 7b (baked lighting, real windows), so the detector is being
+retrained for it. `sh ml/retrain.sh` was started 2026-11-16 13:40 in the background
+(log `retrain.log`). It runs unattended, in this order:
 
-When `pgrep -f ml/train.py` prints nothing and `models/run/checkpoint_best_total.pth` exists:
+1. waits for the first training run (`models/run`, 5 epochs, validation mAP50
+   0.44 -> 0.67 -> 0.73 -> 0.76 -> 0.77 so far) to finish, about 13:50;
+2. re-renders 1,360 labeled views of the new-look home into `data/synth` (about 12 min);
+3. merges them with the real photos and trains 4 more epochs into `models/run2` (about 80 min);
+4. copies the result to `models/detector.pth` and prints "retrain: done".
 
-    cp models/run/checkpoint_best_total.pth models/detector.pth
+**While step 2 is running, do not edit anything under `web/src` or `web/public`**: Vite
+reloads the page and the render script dies. It is safe once `retrain.log` shows the
+"160 images" line. If the chain died (no `ml/train.py` or `synth.mjs` process and no
+"retrain: done" in `retrain.log`), just run it again: `nohup sh ml/retrain.sh > retrain.log 2>&1 &`.
+
+Until it finishes, `models/detector.pth` is a mid-run checkpoint trained on the OLD look, so
+in-app detections are unreliable. When `retrain.log` says "retrain: done":
+
     pkill -f "uvicorn server.app"; uv run uvicorn server.app:app --port 8000   # restart
     cd web && node tests/detect-eval.mjs 3 20      # record the numbers here and in README
 
-If in-app recall is under about 60%, train on:
-`uv run ml/train.py --weights models/run/checkpoint_best_total.pth --epochs 4 --out models/run2`.
+Old-look reference with the old mid-run weights: precision 70%, recall 65% (78% located
+ignoring the label; `water_seepage` often called `peeling_paint`). If the new numbers are
+under about 60% recall, run `sh ml/retrain.sh` once more (it continues from the best weights).
 Training memory: batch 4 holds about 5 GB. Never raise the batch size or worker count
-(a batch-8 run hit 12 GB and pushed the laptop into swap). Do not run two trainings at once.
+(a batch-8 run hit 12 GB and pushed the laptop into swap). Never run two trainings at once.
 
 ## Done
 
@@ -141,35 +150,16 @@ support at IoU 0.5 and the app threshold (0.4), plus AP50. Save `results/eval.cs
 paste the in-app numbers from `detect-eval.mjs` into `results/eval.md` and say clearly that
 those views reuse training decals. SDNET2018 is optional.
 
-## Step 7b: realism pass (Fable, high) — owner wants the home to look realistic
+## Step 7b: realism pass — done
 
-Report-page status when this was written: `web/report.html`, `web/src/report.css` and
-`web/src/report.js` are written but NOT yet run through a test; `tests/report.mjs` does not
-exist yet. Finish and test step 5 first (and 5b, 6, 7).
-
-Goal: photoreal-ish interior, still fast on the owner's M3 / 16 GB. Decide the approach, but
-respect these constraints (all measured or decided earlier):
-
-- Performance: effects at retina resolution ran at 5 fps, plain at 50 fps (training running).
-  Keep the quality governor (`LEVELS`, `govern` in `main.js`); realism must be mostly
-  baked or cheap at runtime. Prefer baked lightmaps / baked AO over runtime GI or shadows.
-  Re-measure with `cd web && node tests/perf.mjs "?fx=auto"` on the real GPU.
-- Memory: 16 GB shared with everything. Textures 2k at most, keep `web/public` under about
-  150 MB, glTF models with compressed textures where possible.
-- Free and legal: CC0 (Poly Haven) assets only, or generated. Blender (free, GPL) may be used
-  as an offline tool for baking (`brew install --cask blender`, about 300 MB; no account),
-  but ask the owner before any download over 2 GB or any signup. Real scan datasets
-  (Matterport3D, ScanNet, HM3D) need a signed access form and are huge: do not use.
-- The detector is trained on today's look. After any visual change that touches walls,
-  floors or lighting: re-render training views (`web/tests/synth.mjs`), `ml/combine.py`,
-  continue training (`ml/train.py --weights ... --epochs 4`, batch 4, one training at a time),
-  then `node tests/detect-eval.mjs 3 20` and `node tests/pins.mjs` must still pass.
-- Defects must stay visible and detectable: nothing may cover or tint a planted decal
-  (`DECOR_LAYER` rule in ARCHITECTURE.md), and decals must be lit like the wall under them
-  (multiply blending over baked light is fine; re-check it looks right).
-- Verify on the real GPU with headless Chrome (`--use-angle=metal`, see `tests/perf.mjs`),
-  not software rendering, and Read the screenshots.
-- Update ARCHITECTURE.md "Look and feel" with what changed.
+See "Realism: baked lighting" in ARCHITECTURE.md. Summary: real window openings with a park
+HDRI outside, lighting baked by `web/src/bake.js` into `web/public/bake/`, trim and rugs are
+real scene objects, the heavy ambient-occlusion pass is gone. Pin test passes on the new house
+(median error 2.6 cm, no duplicates). `tests/look.mjs` takes real-GPU screenshots.
+Left undone on purpose (usage): floors are matte (no reflections), a faint mottling remains
+on some walls, the kitchen and bathroom are sparsely furnished, and frame rate was not
+re-measured after the change (`node tests/perf.mjs "?fx=auto"` once training is over).
+If you change geometry, furniture or lights: rebake (`node tests/bake.mjs 96 3`), then retrain.
 
 ## Known issues
 
@@ -186,4 +176,9 @@ respect these constraints (all measured or decided earlier):
   settles on plain rendering. Re-measure after training ends; if effects still cannot hold
   40 fps, cheapen `fx.js` (drop MSAA samples or the AO pass) rather than removing the governor.
 - Editing any file under `web/src` reloads the owner's open browser tab (Vite). Expected.
-- Stale files that can be ignored: `models/smoke` (trial run), `models_smoke.log`, `synth.log`.
+- Stale files that can be ignored: `models/smoke` (trial run), `models_smoke.log`, `synth.log`,
+  `bake.log`, `web/public/textures/*` unused by `house.js`.
+- `tests/shots.mjs` (README screenshots) runs in software rendering; prefer the real-GPU
+  launch options from `tests/look.mjs` for final screenshots.
+- The report page reads `SEVERITY_COLOR` from `pins.js`, which pulls three.js into the report
+  bundle. Move the constant to `costs.js` and import it from there in both files.

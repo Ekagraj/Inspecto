@@ -38,7 +38,7 @@ export function createFx(renderer, scene, camera) {
       // settings stay as they are for capture(), which the detector was trained on.
       const { toneMapping, toneMappingExposure } = renderer;
       renderer.toneMapping = THREE.NeutralToneMapping;
-      renderer.toneMappingExposure = 0.8;
+      renderer.toneMappingExposure = 1.05;
       composer.render();
       renderer.toneMapping = toneMapping;
       renderer.toneMappingExposure = toneMappingExposure;

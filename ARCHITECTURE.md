@@ -81,12 +81,39 @@ session does have these tools, use them instead.
 - **HUD**: wordmark + room (top left), findings summary linking to the report (top right),
   floor-plan minimap with pins (`minimap.js`, bottom left), Analyze dock (bottom centre),
   scan sweep while analyzing (`body.scanning`), bracketed detection boxes, pin pop-in.
-- **Post-processing** (`fx.js`): GTAO ambient occlusion, bloom on windows, neutral tone
-  mapping, vignette and grain. Display only. Off under automation unless `?fx=1`.
-- **Display-only decor** (`DECOR_LAYER` in `house.js`): baseboards, door casings, rugs and
-  sunlight patches sit on camera layer 1. `capture()` disables that layer, so the detector
-  still sees the plain rooms it was trained on, and raycasts ignore decor. Anything that
-  could cover a wall defect must NOT go on this layer.
+- **Post-processing** (`fx.js`): bloom on windows and lamps, neutral tone mapping, vignette
+  and grain. Display only; `capture()` always renders the plain scene for the detector. Off
+  under automation unless `?fx=1`. A quality governor in `main.js` (`LEVELS`, `govern`) steps
+  resolution and post-processing down when the frame rate drops under 40 fps.
+
+## Realism: baked lighting (step 7b)
+
+Runtime GI and ambient occlusion were too slow on the M3 (5 fps at retina resolution), so
+all lighting is baked and costs nothing per frame.
+
+- **Real openings.** Windows are holes in the exterior walls with frames, a sill and a glass
+  pane; a CC0 park HDRI (`public/textures/sky_2k.hdr`) is the background and the reflection
+  environment. Trim (baseboards, door and window casings) and rugs are ordinary scene objects.
+- **`web/src/bake.js`** is a small CPU lightmapper (three-mesh-bvh for ray casting, MIT), run
+  by `node tests/bake.mjs 96 3` (about 8 minutes). It computes direct light (sun, sky through
+  the window openings, ceiling lamps, all with shadow rays) and then three gather passes for
+  bounced light and soft ambient occlusion. Light colours and strengths are the constants at
+  the top of the file; the sun direction is `SUN_DIR` in `house.js`.
+- **Two outputs in `web/public/bake/`** (committed):
+  `lightmap.png` is an atlas for walls, floors and ceilings (4 cm texels, sRGB-encoded,
+  light / `LIGHT_SCALE`). Those surfaces use `MeshBasicMaterial` with `lightMap` on `uv1`, so
+  they show albedo x baked light and ignore realtime lights. `house.js` packs the atlas
+  deterministically (`allocFace`), so the bake and the runtime agree without a layout file.
+  `props.bin` holds one RGB float per vertex for every other mesh ("props": furniture, trim,
+  fixtures, rugs) in `house.props` order. Props keep their PBR materials, lit only by a white
+  `AmbientLight` multiplied by those vertex colours, plus environment reflections.
+- **Rebake after any change** to wall/floor geometry, furniture, trim or light settings. If
+  `props.bin` does not match the scene, props fall back to flat ambient and the console warns.
+- **Then retrain.** The detector must see the home as it looks: `sh ml/retrain.sh` re-renders
+  the training views, merges them with the real photos and continues training.
+- Defects stay visible: decals multiply over the baked wall, and nothing may be placed over a
+  spot where a defect can be planted (the planting check rejects spots behind casings, trim
+  or furniture).
 
 ## Layout
 
@@ -101,6 +128,7 @@ web/
   src/pins.js      boxes -> 3D pins (raycast), dedupe, picking
   src/minimap.js   floor-plan minimap
   src/fx.js        display-only post-processing
+  src/bake.js      offline light bake (dev tool)
   src/costs.js     costs.json lookup, severity, totals
   src/store.js     localStorage
   src/report.js    report page
@@ -112,10 +140,13 @@ web/
   tests/detect-eval.mjs  in-app detector precision/recall vs ground truth
   tests/shots.mjs  screenshots with post-processing (README)
   tests/synth.mjs  renders labeled training views
+  tests/bake.mjs   runs the light bake, writes public/bake/
+  tests/look.mjs   real-GPU screenshots of fixed views
+  tests/perf.mjs   real-GPU frame rate
 server/app.py      FastAPI: /api/health, /api/detect, /api/client/*
 server/detector.py RF-DETR checkpoint loader + predict
 server/client.py   Ollama chat + scripted fallback
-ml/get_data.py  ml/train.py  ml/make_decals.py  ml/evaluate.py
+ml/get_data.py  ml/train.py  ml/make_decals.py  ml/combine.py  ml/retrain.sh  ml/evaluate.py
 models/ data/      gitignored
 results/           evaluation table (CSV + MD) and chart (PNG), committed
 ```
@@ -192,8 +223,8 @@ Report precision, recall, F1 and support per class, plus AP50. Save
 
 | Thing | License |
 |---|---|
-| three.js, Vite, FastAPI, Playwright | MIT / Apache 2.0 |
+| three.js, three-mesh-bvh, Vite, FastAPI, Playwright | MIT / Apache 2.0 |
 | rfdetr + RF-DETR Nano weights, PyTorch, torchvision, Pillow, matplotlib, uvicorn | Apache 2.0 / BSD / HPND |
 | Ollama (MIT), Llama 3.2 3B weights | Llama 3.2 Community License (weights, not code) |
 | Defect images | CC BY 4.0 (Roboflow Universe `detr_crack_dataset`) |
-| Textures and furniture | CC0 (Poly Haven) |
+| Textures, furniture and sky HDRI (`ballawley_park`) | CC0 (Poly Haven) |

@@ -10,9 +10,9 @@ import { MeshBVH } from 'three-mesh-bvh';
 import { LIGHT_SCALE, SUN_DIR } from './house.js';
 import { rng } from './defects.js';
 
-const SUN = [13, 11.6, 9.6]; // irradiance on a surface facing the sun
-const SKY = [4.4, 5.4, 6.6]; // radiance of the sky seen through a window
-const LAMP = [46, 35, 22]; // radiance of a ceiling lamp disc
+const SUN = [15, 13.3, 11]; // irradiance on a surface facing the sun
+const SKY = [8.8, 10.8, 13.2]; // radiance of the sky seen through a window
+const LAMP = [74, 56, 35]; // radiance of a ceiling lamp disc
 const EPS = 0.012;
 
 export async function bake({ scene, house }, { samples = 48, passes = 3, directSamples = 8 } = {}) {
@@ -173,7 +173,8 @@ export async function bake({ scene, house }, { samples = 48, passes = 3, directS
       for (let ch = 0; ch < 3; ch++) s.ind[o + ch] /= samples;
       if (pass === 0) s.bad[o / 3] = back > samples * 0.4 ? 1 : 0; // mostly back faces: the point is inside a wall or object
     });
-    for (const f of F) blur(f.ind, f.bad, f.rect.w, f.rect.h, 2);
+    // Bounced light is smooth by nature, so blur it hard (twice = roughly Gaussian) to kill sampling blotches.
+    for (const f of F) { blur(f.ind, f.bad, f.rect.w, f.rect.h, 4); blur(f.ind, f.bad, f.rect.w, f.rect.h, 4); }
     for (const s of [...F, ...P]) for (let i = 0; i < s.total.length; i++) s.total[i] = s.direct[i] + s.ind[i];
     refreshProps();
     console.log(`bake: gather ${pass + 1}/${passes} done ${((performance.now() - t0) / 1000).toFixed(0)}s`);
