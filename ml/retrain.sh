@@ -8,10 +8,8 @@ cd "$(dirname "$0")/.."
 # Never run two trainings at once (a second one pushed this laptop into swap).
 while pgrep -f "ml/train.py" > /dev/null; do sleep 30; done
 
-# Start from the best weights so far.
-START=models/detector.pth
-[ -f models/run/checkpoint_best_total.pth ] && START=models/run/checkpoint_best_total.pth
-cp "$START" models/retrain_start.pth
+# Start from the model in use (models/run is the first, older run: never start from it again).
+cp models/detector.pth models/retrain_start.pth
 
 # Fresh labeled views of the home as it looks now (same file names, so old ones are replaced).
 (cd web && node tests/synth.mjs ../data/synth/train 1000 150 8 && node tests/synth.mjs ../data/synth/valid 5000 20 8)

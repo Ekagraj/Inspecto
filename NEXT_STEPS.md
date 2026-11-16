@@ -173,12 +173,16 @@ What was done:
 - Each Roboflow set's own `test` split is unused: use them in step 7 for per-class numbers.
 - Scuff and hole data is thin (about 380 photos, some of them augmented copies). The owner's
   own photos with corrected labels would be the best addition (not built yet).
-- Left on disk, unused, safe to delete if the owner agrees (they are wary of deletes, so ask):
-  `data/extra/paint_defects/` (250 MB, rejected: street views of whole buildings, doubtful
-  licence), `data/extra/commons/` (Wikimedia photos without boxes, small), `data/smoke7/` and
-  `models/smoke7/` (about 850 MB, the dry run).
+- Cleaned up at the owner's request (2026-11-16): the rejected "paint defects" set, the
+  Wikimedia Commons photos and their download script (about 115 permissive photos without
+  boxes; `git log` has the script), the dry-run outputs, the Roboflow zips (already
+  extracted; `ml/get_roboflow.py` fetches them again if ever needed), `models/smoke`,
+  `models/retrain_start.pth` and stale logs. Still on disk and NOT needed by the app, but
+  kept as training records, 1.6 GB: `models/run` and `models/run2` (ask before deleting).
 - Searched and rejected: BD3 (no licence stated), Kasbah of Algiers set (224 px, no boxes),
-  RF100 wall-damage (classes are rotation levels), the Hugging Face "paint defects" mirror.
+  RF100 wall-damage (classes are rotation levels), the Hugging Face "paint defects" mirror
+  (street views of whole buildings, doubtful licence), Wikimedia Commons (two thirds is
+  share-alike, the rest has no boxes).
 
 ### Step 5e: repair cost by location — three-level test done
 
@@ -244,7 +248,6 @@ If you change geometry, furniture or lights: rebake (`node tests/bake.mjs 96 3`)
   settles on plain rendering. Re-measure after training ends; if effects still cannot hold
   40 fps, cheapen `fx.js` (drop MSAA samples or the AO pass) rather than removing the governor.
 - Editing any file under `web/src` reloads the owner's open browser tab (Vite). Expected.
-- Stale files that can be ignored: `models/smoke` (trial run), `models_smoke.log`, `synth.log`,
-  `bake.log`, `web/public/textures/*` unused by `house.js`.
+- Stale files that can be ignored: `web/public/textures/*` unused by `house.js`.
 - `tests/shots.mjs` (README screenshots) runs in software rendering; prefer the real-GPU
   launch options from `tests/look.mjs` for final screenshots.
