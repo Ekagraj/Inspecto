@@ -3,26 +3,51 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AI Home Inspector</title>
+    <title>Inspecto — AI Home Inspector</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;600;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
   </head>
   <body>
     <canvas id="view"></canvas>
 
-    <div id="topbar" class="hud panel">
-      <span class="brand">INSPECTO</span>
-      <span id="room">—</span>
-      <span id="status">Ready</span>
-      <a id="count" href="/report.html">No findings yet</a>
-    </div>
+    <header id="hud-top" class="hud">
+      <span class="logo">Inspecto</span>
+      <span class="tag" id="mode">Inspection</span>
+      <span class="where"><span class="label">Room</span><span id="room">—</span></span>
+    </header>
+
+    <a id="summary" class="hud panel ticks" href="/report.html">
+      <span class="label">Findings</span>
+      <b id="sum-n">0</b>
+      <span id="sum-cost">Nothing pinned yet</span>
+      <span class="go">Open report →</span>
+    </a>
+
     <div id="boxes" class="hud"></div>
+    <div id="scan" class="hud" aria-hidden="true"><i></i></div>
     <div id="crosshair" class="hud"></div>
     <div id="chip" class="hud panel" hidden></div>
-    <button id="analyze" class="hud">Analyze this view <kbd>Space</kbd></button>
-    <div id="hint" class="hud panel"><b>WASD</b> move · <b>Mouse</b> look · <b>Shift</b> run · <b>Space</b> analyze · <b>E</b> pin details · <b>Esc</b> release cursor</div>
 
-    <aside id="card" class="hud panel" hidden aria-live="polite">
+    <div id="dock" class="hud">
+      <span id="status" role="status">Ready</span>
+      <button id="analyze"><kbd>Space</kbd>Analyze this view</button>
+    </div>
+
+    <div id="map" class="hud panel ticks">
+      <span class="label">Floor plan</span>
+      <svg id="minimap" role="img" aria-label="Floor plan with your position and pinned findings"></svg>
+    </div>
+
+    <ul id="hint" class="hud">
+      <li><kbd>W A S D</kbd>Move</li>
+      <li><kbd>Mouse</kbd>Look</li>
+      <li><kbd>Shift</kbd>Run</li>
+      <li><kbd>E</kbd>Pin details</li>
+      <li><kbd>Esc</kbd>Free cursor</li>
+    </ul>
+
+    <aside id="card" class="hud panel ticks" hidden aria-live="polite">
       <img id="card-thumb" alt="Captured view of this finding" />
       <div class="card-body">
         <div class="card-head">
@@ -39,22 +64,37 @@
         <p id="card-cause"></p>
         <p id="card-action"></p>
         <div class="row">
-          <button id="card-remove" class="ghost">Not a defect <kbd>X</kbd></button>
-          <button id="card-close" class="ghost">Close <kbd>E</kbd></button>
+          <button id="card-remove" class="ghost"><kbd>X</kbd>Not a defect</button>
+          <button id="card-close" class="ghost"><kbd>E</kbd>Close</button>
         </div>
       </div>
     </aside>
 
-    <div id="start">
-      <div class="card panel">
-        <h1>AI Home <em>Inspector</em></h1>
-        <p>Walk through the home and let a local AI flag visible defects. Visual triage only, not a licensed inspection.</p>
-        <div class="row">
-          <button id="enter">Start inspection</button>
+    <main id="start">
+      <div class="start-inner">
+        <div class="start-top">
+          <span class="logo">Inspecto</span>
+          <span class="label">Local AI · No cloud · Visual triage</span>
         </div>
-        <small>Click the view to capture the mouse. Everything runs on this laptop.</small>
+        <h1>See what the walls<br />are <em>hiding.</em></h1>
+        <p class="lede">Walk a 3D home. A vision model running on this laptop flags cracks, mold, water stains and peeling paint, pins each one in space and prices the repair.</p>
+        <div class="modes">
+          <button id="enter" class="mode ticks" disabled>
+            <span class="label">01 — Inspection</span>
+            <strong>Walk the home</strong>
+            <span class="desc">Analyze any view, pin what the AI finds, and leave with a repair-cost report.</span>
+            <span class="cta" id="enter-cta">Loading home…</span>
+          </button>
+          <button id="enter-game" class="mode ticks" hidden>
+            <span class="label">02 — Training</span>
+            <strong>Beat the clock</strong>
+            <span class="desc">Ten minutes, hidden defects, and a client with questions. Find them all.</span>
+            <span class="cta">Start training →</span>
+          </button>
+        </div>
+        <p class="fine">Visual triage only. This is not a licensed home inspection.</p>
       </div>
-    </div>
+    </main>
 
     <script type="module" src="/src/main.js"></script>
   </body>

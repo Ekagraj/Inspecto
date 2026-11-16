@@ -69,6 +69,25 @@ session does have these tools, use them instead.
 10. **Python env: one `uv` project at the repo root** (`pyproject.toml`,
     Python 3.12). Weights and data are gitignored (`models/`, `data/`).
 
+## Look and feel (added in step 4, at the owner's request for a striking UI)
+
+- **Design system** in `web/src/style.css`: ink glass panels (`.panel`) with amber crop-mark
+  corners (`.ticks`), Instrument Serif for headlines and big numbers, Geist Mono micro-labels
+  (`.label`), Geist for body text, one amber accent, severity colours amber / orange / red
+  (`SEVERITY_COLOR` in `pins.js`, `.sev` chip). `report.html` and the game UI must reuse these
+  tokens and classes instead of inventing new ones.
+- **Start screen**: editorial headline over a slow camera orbit of the living room. Mode cards
+  are `button.mode`; the training card `#enter-game` exists but is `hidden` until step 6.
+- **HUD**: wordmark + room (top left), findings summary linking to the report (top right),
+  floor-plan minimap with pins (`minimap.js`, bottom left), Analyze dock (bottom centre),
+  scan sweep while analyzing (`body.scanning`), bracketed detection boxes, pin pop-in.
+- **Post-processing** (`fx.js`): GTAO ambient occlusion, bloom on windows, neutral tone
+  mapping, vignette and grain. Display only. Off under automation unless `?fx=1`.
+- **Display-only decor** (`DECOR_LAYER` in `house.js`): baseboards, door casings, rugs and
+  sunlight patches sit on camera layer 1. `capture()` disables that layer, so the detector
+  still sees the plain rooms it was trained on, and raycasts ignore decor. Anything that
+  could cover a wall defect must NOT go on this layer.
+
 ## Layout
 
 ```
@@ -79,14 +98,20 @@ web/
   src/walk.js      pointer-lock look, WASD, circle-vs-wall collision
   src/defects.js   seeded planting of decal quads
   src/detect.js    capture view, POST /api/detect
-  src/pins.js      boxes -> 3D pins (raycast), dedupe, detail card
+  src/pins.js      boxes -> 3D pins (raycast), dedupe, picking
+  src/minimap.js   floor-plan minimap
+  src/fx.js        display-only post-processing
   src/costs.js     costs.json lookup, severity, totals
   src/store.js     localStorage
   src/report.js    report page
   src/game.js      timer, flagging, client chat, scoring
   public/decals/   *.png + decals.json
   public/textures/ public/models/   CC0 Poly Haven assets
-  tests/smoke.mjs  Playwright checks + screenshots
+  tests/smoke.mjs  rooms, collision, one real detection
+  tests/pins.mjs   pinning accuracy vs ground truth, card, removal, persistence
+  tests/detect-eval.mjs  in-app detector precision/recall vs ground truth
+  tests/shots.mjs  screenshots with post-processing (README)
+  tests/synth.mjs  renders labeled training views
 server/app.py      FastAPI: /api/health, /api/detect, /api/client/*
 server/detector.py RF-DETR checkpoint loader + predict
 server/client.py   Ollama chat + scripted fallback
@@ -118,8 +143,9 @@ GET  /api/health -> {detector: bool, ollama: bool}
 {id, label, room, surface, pos, normal, size: [w,h], decal}
 ```
 
-Debug hook for tests: `window.inspecto = {teleport(x, z, yaw, pitch), analyze(),
-findings(), planted()}`.
+Debug hooks for tests: `window.inspecto = {app, pins, teleport(x, z, yaw, pitch), analyze(),
+analyzeTruth(), replant(seed, count), planted(), randomPose(rand), evalShot(rand), rng(seed)}`.
+`analyze()` resolves to `{dets, added, merged, ignored}`.
 
 ## Key algorithms
 

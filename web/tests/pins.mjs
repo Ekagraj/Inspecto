@@ -73,7 +73,7 @@ await page.evaluate(async () => {
   I.teleport(f.pos[0] + f.normal[0] * 1.6, f.pos[2] + f.normal[2] * 1.6, Math.atan2(f.normal[0], f.normal[2]), Math.atan2(f.pos[1] - 1.6, 1.6));
 });
 const before = await page.evaluate(() => window.inspecto.pins.findings.length);
-await page.waitForSelector('#chip:not([hidden])', { timeout: 3000 }).catch(() => errors.push('no hover chip at the crosshair'));
+await page.waitForSelector('#chip:not([hidden])', { timeout: 15000 }).catch(() => errors.push('no hover chip at the crosshair'));
 await page.keyboard.press('KeyE');
 await page.waitForTimeout(200);
 if (await page.isHidden('#card')) errors.push('E did not open the detail card');
@@ -84,14 +84,14 @@ await page.reload();
 await page.waitForFunction(() => window.inspecto);
 const restored = await page.evaluate(() => window.inspecto.pins.findings.length);
 if (restored !== before) errors.push(`persistence: ${before} findings before reload, ${restored} after`);
-console.log('count chip:', await page.textContent('#count'));
+console.log('summary:', await page.textContent('#sum-n'), 'findings,', await page.textContent('#sum-cost'));
 
 await page.click('#enter');
 await page.evaluate(() => {
   const I = window.inspecto, f = I.pins.findings.find((f) => f.surface === 'wall');
   I.teleport(f.pos[0] + f.normal[0] * 1.6, f.pos[2] + f.normal[2] * 1.6, Math.atan2(f.normal[0], f.normal[2]), Math.atan2(f.pos[1] - 1.6, 1.6));
 });
-await page.waitForSelector('#chip:not([hidden])', { timeout: 3000 }).catch(() => {});
+await page.waitForSelector('#chip:not([hidden])', { timeout: 15000 }).catch(() => {});
 await page.mouse.click(640, 360); // click the pin at the centre of the view
 await page.waitForTimeout(200);
 if (await page.isHidden('#card')) errors.push('click did not open the detail card');

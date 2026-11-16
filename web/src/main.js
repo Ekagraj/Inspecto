@@ -1,10 +1,12 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { buildHouse, roomAt } from './house.js';
+import { buildHouse, roomAt, DECOR_LAYER } from './house.js';
 import { createWalk } from './walk.js';
 import { loadDecals, plantDefects, clearDefects, visibleBoxes, randomPose, rng } from './defects.js';
 import { capture, detect } from './detect.js';
 import { createPins, SEVERITY_COLOR } from './pins.js';
+import { createMinimap } from './minimap.js';
+import { createFx } from './fx.js';
 import { DEFECTS, nameOf, money, totals } from './costs.js';
 import './style.css';
 
@@ -20,12 +22,18 @@ scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnviron
 scene.environmentIntensity = 0.35;
 
 const camera = new THREE.PerspectiveCamera(70, 1, 0.05, 60);
+camera.layers.enable(DECOR_LAYER);
 const house = buildHouse(scene);
 const walk = createWalk(camera, canvas, house.colliders);
-walk.teleport(4.6, 3.4, 0.6);
+const SPAWN = [4.6, 3.4, 0.6];
+
+// Post-processing is for people. Automated runs (tests, data rendering) skip it unless ?fx=1.
+const fxParam = new URLSearchParams(location.search).get('fx');
+const fx = (fxParam ? fxParam !== '0' : !navigator.webdriver) ? createFx(renderer, scene, camera) : null;
 
 const resize = () => {
   renderer.setSize(innerWidth, innerHeight, false);
+  fx?.setSize(innerWidth, innerHeight);
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
 };
@@ -45,16 +53,22 @@ export function replant(seed, count = 8) {
 }
 replant(LISTING_SEED);
 
-// --- Findings: pins in 3D + detail card ---
-const card = $('#card'), chip = $('#chip'), status = $('#status');
+// --- Findings: pins in 3D, minimap, summary, detail card ---
+const card = $('#card'), chip = $('#chip'), status = $('#status'), summary = $('#summary');
+const minimap = createMinimap($('#minimap'));
 let openId = null, hover = null;
 
 export const pins = createPins(app, {
   onChange(findings) {
     const t = totals(findings);
-    $('#count').textContent = findings.length
-      ? `${findings.length} finding${findings.length > 1 ? 's' : ''} · ${money(t.low)}–${money(t.high)} · Report →`
-      : 'No findings yet';
+    if ($('#sum-n').textContent !== String(findings.length)) { // restart the count animation
+      summary.classList.remove('bump');
+      void summary.offsetWidth;
+      summary.classList.add('bump');
+    }
+    $('#sum-n').textContent = findings.length;
+    $('#sum-cost').textContent = findings.length ? `${money(t.low)} – ${money(t.high)}` : 'Nothing pinned yet';
+    minimap.pins(findings);
     if (openId && !findings.some((f) => f.id === openId)) closeCard();
   },
 });
@@ -71,7 +85,7 @@ function openCard(f) {
   $('#card-where').textContent = `${f.roomName}, ${f.surface} (${f.material})`;
   $('#card-size').textContent = `${f.sizeM[0].toFixed(2)} × ${f.sizeM[1].toFixed(2)} m (${f.areaM2.toFixed(2)} m²)`;
   $('#card-score').textContent = `${Math.round(f.score * 100)}%`;
-  $('#card-cost').textContent = `${money(f.cost.low)}–${money(f.cost.high)} (estimate)`;
+  $('#card-cost').textContent = `${money(f.cost.low)} – ${money(f.cost.high)} (estimate)`;
   $('#card-cause').textContent = d?.cause ?? '';
   $('#card-action').textContent = d?.action ?? '';
   card.hidden = false;
@@ -86,7 +100,7 @@ $('#card-remove').addEventListener('click', () => pins.remove(openId));
 
 // --- Analyze this view ---
 const boxes = $('#boxes');
-function showBoxes(dets, ms = 2500) {
+function showBoxes(dets, ms = 2600) {
   boxes.replaceChildren(...dets.map((d) => {
     const el = document.createElement('div');
     el.className = 'box';
@@ -104,9 +118,13 @@ export async function analyze(source) {
   if (busy) return null;
   busy = true;
   status.textContent = 'Analyzing…';
+  document.body.classList.add('scanning');
   try {
+    pins.visible = false; // the detector must not see our own markers
     const shot = capture(app);
-    const dets = source ? source(shot) : await detect(shot.image);
+    pins.visible = true;
+    // Let the scan sweep play at least once when a person is watching.
+    const [dets] = await Promise.all([source ? source(shot) : detect(shot.image), source ? 0 : new Promise((r) => setTimeout(r, 700))]);
     showBoxes(dets);
     const r = pins.addDetections(dets, shot);
     status.textContent = !dets.length ? 'Nothing found in this view'
@@ -114,17 +132,25 @@ export async function analyze(source) {
     return { dets, ...r };
   } catch (e) {
     console.warn(e);
+    pins.visible = true;
     status.textContent = 'Detector offline. Start the server (see README).';
     return null;
-  } finally { busy = false; }
+  } finally {
+    busy = false;
+    document.body.classList.remove('scanning');
+  }
 }
 $('#analyze').addEventListener('click', () => analyze());
 
 // --- Input ---
-const start = $('#start');
-$('#enter').addEventListener('click', () => { start.hidden = true; walk.lock(); });
+const live = () => document.body.classList.contains('live');
+$('#enter').addEventListener('click', () => {
+  walk.teleport(...SPAWN);
+  document.body.classList.add('live');
+  walk.lock();
+});
 canvas.addEventListener('click', (e) => {
-  if (!start.hidden) return;
+  if (!live()) return;
   const locked = document.pointerLockElement === canvas;
   const point = locked ? { x: 0, y: 0 } : { x: (e.clientX / innerWidth) * 2 - 1, y: 1 - (e.clientY / innerHeight) * 2 };
   const f = pins.pick(camera, point);
@@ -133,29 +159,44 @@ canvas.addEventListener('click', (e) => {
   else if (!locked) walk.lock();
 });
 addEventListener('keydown', (e) => {
-  if (!start.hidden || e.target.closest?.('input,textarea,button')) return;
+  if (!live() || e.target.closest?.('input,textarea,button')) return;
   if (e.code === 'Space') { e.preventDefault(); analyze(); }
   else if (e.code === 'KeyE') { if (openId) closeCard(); else if (hover) openCard(hover); }
   else if (e.code === 'KeyX' && openId) pins.remove(openId);
   else if (e.code === 'Escape' && openId) closeCard();
 });
 
+// --- Frame loop ---
 const clock = new THREE.Clock();
-let roomName = '', frame = 0;
+let roomName = '', lastPick = 0;
 renderer.setAnimationLoop(() => {
-  walk.update(clock.getDelta());
-  const name = roomAt(camera.position.x, camera.position.z)?.name ?? 'Outside';
-  if (name !== roomName) $('#room').textContent = roomName = name;
-  if (frame++ % 6 === 0) { // which pin is under the crosshair?
-    const f = pins.pick(camera, { x: 0, y: 0 }, 50);
+  const dt = clock.getDelta(), t = clock.elapsedTime;
+  if (live()) walk.update(dt);
+  else { // slow orbit behind the start screen, always looking across the living room
+    const dx = 1.9 * Math.cos(t * 0.09 + 0.9), dz = 1.2 * Math.sin(t * 0.09 + 0.9);
+    walk.teleport(3.3 + dx, 2.6 + dz, Math.atan2(dx, dz), -0.06);
+  }
+
+  const room = roomAt(camera.position.x, camera.position.z);
+  if ((room?.name ?? 'Outside') !== roomName) $('#room').textContent = roomName = room?.name ?? 'Outside';
+  minimap.player(camera.position.x, camera.position.z, camera.rotation.y, room?.id);
+  const now = performance.now();
+  pins.update(now);
+  if (now - lastPick > 100) { // which pin is under the crosshair?
+    lastPick = now;
+    const f = live() ? pins.pick(camera, { x: 0, y: 0 }, 50) : null;
     if (f?.id !== hover?.id) {
       hover = f;
       chip.hidden = !f;
+      document.body.classList.toggle('hovering', !!f);
       if (f) chip.textContent = `#${f.n} ${nameOf(f.label)} · E for details`;
     }
   }
-  renderer.render(scene, camera);
+  if (fx) fx.render(t); else renderer.render(scene, camera);
 });
+
+$('#enter').disabled = false;
+$('#enter-cta').textContent = 'Start inspection →';
 
 // Hooks for tests and tools.
 const truth = (shot) => visibleBoxes(shot.camera, app.planted, house.occluders).map((b) => ({ ...b, score: 0.9 }));
@@ -164,10 +205,20 @@ window.inspecto = {
   analyzeTruth: () => analyze(truth), // pin the ground-truth boxes instead of asking the detector
   planted: () => app.planted.map(({ mesh, ...d }) => d),
   randomPose: (rand) => randomPose(rand, app.planted, house.colliders),
+  /** Detector vs ground truth for one random view (no pinning). */
+  async evalShot(rand) {
+    walk.teleport(...randomPose(rand, app.planted, house.colliders));
+    pins.visible = false;
+    const shot = capture(app);
+    pins.visible = true;
+    return { dets: await detect(shot.image), truth: truth(shot) };
+  },
   /** One synthetic training shot: random pose near a defect -> {image, boxes}. */
   synthShot(rand) {
     walk.teleport(...randomPose(rand, app.planted, house.colliders));
+    pins.visible = false;
     const shot = capture(app, 640);
+    pins.visible = true;
     return { image: shot.image, w: shot.canvas.width, h: shot.canvas.height, boxes: visibleBoxes(shot.camera, app.planted, house.occluders) };
   },
 };

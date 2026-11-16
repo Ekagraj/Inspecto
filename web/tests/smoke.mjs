@@ -38,8 +38,9 @@ const pose = await page.evaluate(() => {
 });
 await page.evaluate((p) => window.inspecto.teleport(...p), pose);
 await page.waitForTimeout(300);
-const dets = await page.evaluate(() => window.inspecto.analyze());
-console.log('detections:', JSON.stringify(dets.map((d) => [d.label, d.score])));
+const res = await page.evaluate(() => window.inspecto.analyze());
+const dets = res?.dets ?? [];
+console.log('detections:', JSON.stringify(dets.map((d) => [d.label, d.score])), 'pinned:', res?.added);
 await page.screenshot({ path: `${out}/analyze.png` });
 if (!dets.length) errors.push('no detections in front of a planted defect');
 

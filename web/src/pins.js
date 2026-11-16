@@ -49,6 +49,7 @@ export function createPins(app, { persist = true, onChange = () => {} } = {}) {
   scene.add(group);
   let findings = persist ? loadFindings() : [];
   let selected = null;
+  const born = new Map(); // finding id -> time it was pinned, for the pop-in animation
 
   /** Where on the house does this screen box sit? -> {pos, normal, u, w, h} or null. */
   function locate([x1, y1, x2, y2], cam) {
@@ -97,7 +98,7 @@ export function createPins(app, { persist = true, onChange = () => {} } = {}) {
       group.add(new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(corners), new THREE.LineBasicMaterial({ color, toneMapped: false })));
       const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: markerTexture(f.n, color), toneMapped: false, depthWrite: false }));
       sprite.position.copy(pos).addScaledVector(n, 0.04);
-      sprite.scale.setScalar(f.id === selected ? 0.24 : 0.17);
+      sprite.userData.id = f.id;
       sprite.renderOrder = 2;
       group.add(sprite);
     }
@@ -140,7 +141,9 @@ export function createPins(app, { persist = true, onChange = () => {} } = {}) {
           if (twin.clipped !== clipped ? !clipped : d.score > twin.score) Object.assign(twin, fresh);
           result.merged++;
         } else {
-          findings.push({ id: crypto.randomUUID(), n: Math.max(0, ...findings.map((f) => f.n)) + 1, ...fresh });
+          const id = crypto.randomUUID();
+          born.set(id, performance.now());
+          findings.push({ id, n: Math.max(0, ...findings.map((f) => f.n)) + 1, ...fresh });
           result.added++;
         }
       }
@@ -154,8 +157,18 @@ export function createPins(app, { persist = true, onChange = () => {} } = {}) {
       changed();
     },
     clear() { findings = []; selected = null; changed(); },
-    select(id) { selected = id; draw(); },
+    select(id) { selected = id; },
     set visible(v) { group.visible = v; },
+
+    /** Per-frame marker animation: new pins pop in, the selected pin breathes. */
+    update(now) {
+      for (const s of group.children) {
+        if (!s.isSprite) continue;
+        const x = Math.min(1, (now - (born.get(s.userData.id) ?? 0)) / 450) - 1;
+        const pop = 1 + 2.70158 * x ** 3 + 1.70158 * x ** 2; // ease-out-back
+        s.scale.setScalar(0.17 * pop * (s.userData.id === selected ? 1.35 + 0.08 * Math.sin(now / 180) : 1));
+      }
+    },
 
     /** The pin nearest a screen point (NDC), if it is within `maxPx` and not hidden behind something. */
     pick(camera, point, maxPx = 70) {

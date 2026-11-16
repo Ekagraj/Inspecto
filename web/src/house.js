@@ -3,6 +3,9 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 export const H = 2.6; // ceiling height (m)
+// Trim, rugs and sunlight live on this layer: people see them, capture() hides them,
+// so the detector keeps seeing the plain rooms it was trained on. Raycasts ignore it too.
+export const DECOR_LAYER = 1;
 const T = 0.14; // wall thickness
 const DOOR_H = 2.05;
 
@@ -78,6 +81,11 @@ export function buildHouse(scene) {
     for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * su, uv.getY(i) * sv);
   };
 
+  const decor = (mesh, x, y, z) => { mesh.position.set(x, y, z); mesh.layers.set(DECOR_LAYER); scene.add(mesh); return mesh; };
+  const trim = new THREE.MeshStandardMaterial({ color: 0xf7f5f0, roughness: 0.4 });
+  const walnut = new THREE.MeshStandardMaterial({ color: 0x5c3f2a, roughness: 0.5 });
+  const box = (w, h, d, mat) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+
   const surfaces = []; // walls, floors, ceilings: where defects can be and pins can land
   const occluders = []; // surfaces + furniture
   const colliders = []; // {x0,z0,x1,z1} rectangles the player cannot enter
@@ -97,6 +105,10 @@ export function buildHouse(scene) {
     mesh.position.set(cx, (y0 + y1) / 2, cz);
     scene.add(mesh);
     surfaces.push(mesh);
+    if (solid) for (const s of [1, -1]) { // baseboard on both faces
+      const off = s * (T / 2 + 0.007);
+      decor(alongX ? box(len, 0.1, 0.014, trim) : box(0.014, 0.1, len, trim), cx + (alongX ? 0 : off), 0.05, cz + (alongX ? off : 0));
+    }
     if (solid) {
       colliders.push(alongX
         ? { x0: from, x1: to, z0: fixed - T / 2, z1: fixed + T / 2 }
@@ -112,6 +124,9 @@ export function buildHouse(scene) {
     for (const [c, width] of [...(w.doors || [])].sort((p, q) => p[0] - q[0])) {
       addWallBox(alongX, fixed, from, c - width / 2, 0, H, true);
       addWallBox(alongX, fixed, c - width / 2, c + width / 2, DOOR_H, H, false);
+      const D = T + 0.05, at = (along, y) => (alongX ? [along, y, fixed] : [fixed, y, along]); // door casing
+      for (const e of [c - width / 2, c + width / 2]) decor(alongX ? box(0.07, DOOR_H, D, walnut) : box(D, DOOR_H, 0.07, walnut), ...at(e, DOOR_H / 2));
+      decor(alongX ? box(width + 0.14, 0.07, D, walnut) : box(D, 0.07, width + 0.14, walnut), ...at(c, DOOR_H + 0.035));
       from = c + width / 2;
     }
     addWallBox(alongX, fixed, from, end, 0, H, true);
@@ -139,7 +154,7 @@ export function buildHouse(scene) {
   }
   scene.add(new THREE.HemisphereLight(0xffffff, 0xb8ad9c, 1.1));
 
-  const glass = new THREE.MeshBasicMaterial({ color: 0xdff0ff });
+  const glass = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xdff0ff).multiplyScalar(4.5) }); // far over 1.0 so only windows bloom
   const frame = new THREE.MeshStandardMaterial({ color: 0xfbfbf8, roughness: 0.6 });
   for (const win of WINDOWS) {
     const g = new THREE.Group();
@@ -166,6 +181,28 @@ export function buildHouse(scene) {
   fixture(0.9, 0.85, 0.5, 6.7, 9.15); // vanity
 
   occluders.push(...surfaces);
+
+  // Rugs and sunlight patches (display only).
+  const paint = (w, h, draw) => {
+    const c = document.createElement('canvas');
+    c.width = w; c.height = h;
+    draw(c.getContext('2d'));
+    return Object.assign(new THREE.CanvasTexture(c), { colorSpace: THREE.SRGBColorSpace });
+  };
+  const flat = (w, d, mat, x, y, z) => { const m = decor(new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat), x, y, z); m.rotation.x = -Math.PI / 2; return m; };
+  const rug = (x, z, w, d, base, stripe) => flat(w, d, new THREE.MeshStandardMaterial({ roughness: 1, map: paint(256, 176, (g) => {
+    g.fillStyle = base; g.fillRect(0, 0, 256, 176);
+    g.strokeStyle = stripe; g.lineWidth = 3; g.strokeRect(12, 12, 232, 152);
+    g.lineWidth = 1; for (let i = 30; i < 230; i += 14) { g.beginPath(); g.moveTo(i, 24); g.lineTo(i, 152); g.stroke(); }
+  }) }), x, 0.006, z);
+  rug(3, 2.1, 2.8, 1.9, '#2f4a4f', '#d9c9a3');
+  rug(3.4, 7.9, 1.7, 2.3, '#8a4b32', '#ecd9b8');
+  const sun = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.5, map: paint(128, 128, (g) => {
+    const grad = g.createRadialGradient(64, 64, 6, 64, 64, 64);
+    grad.addColorStop(0, 'rgba(255,236,196,1)'); grad.addColorStop(1, 'rgba(255,236,196,0)');
+    g.fillStyle = grad; g.fillRect(0, 0, 128, 128);
+  }) });
+  for (const win of WINDOWS) flat(win.w * 1.5, 3.2, sun, win.pos[0] + win.normal[0] * 1.5, 0.012, win.pos[2] + win.normal[2] * 1.5);
 
   const gltf = new GLTFLoader();
   const ready = Promise.all(FURNITURE.map(async ([name, x, z, rot]) => {
