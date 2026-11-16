@@ -24,6 +24,16 @@
 .controls button { padding: 8px 12px; }
 .controls button:first-of-type { margin-left: auto; }
 
+.loc { margin: 22px 0 0; padding: 16px 18px; display: grid; gap: 10px; }
+.loc-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.loc-row input { flex: 1 1 260px; min-width: 0; padding: 10px 12px; font: 500 14px var(--mono); color: var(--paper); background: rgba(0, 0, 0, 0.25); border: 1px solid var(--line); }
+.loc-row input:focus { border-color: var(--amber); outline: 0; }
+.loc-now { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.loc-now b { font: 400 24px/1 var(--serif); color: var(--paper); }
+.loc-now .sev { background: var(--amber); }
+.loc-note, .loc-src { margin: 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.loc-note { color: var(--paper); }
+
 @media (max-width: 760px) {
   .photo { grid-template-columns: 1fr; }
 }

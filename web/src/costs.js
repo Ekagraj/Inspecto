@@ -15,9 +15,37 @@ export function severityOf(label, w, h) {
   return x < a ? 'minor' : x < b ? 'moderate' : 'major';
 }
 
-export function costOf(label, severity) {
+/** `factor` scales the US-average table to a local labour market (see AREAS). */
+export function costOf(label, severity, factor = 1) {
   const [low, high] = DEFECTS[label]?.[severity] ?? [0, 0];
-  return { low, high };
+  return { low: Math.round((low * factor) / 10) * 10, high: Math.round((high * factor) / 10) * 10 };
+}
+
+// Location pricing: three test areas plus the US average. factor = local painter wage / US wage.
+// shortcut: wages are only the labour part of a repair price, and only three areas exist;
+// load the full metro table (same BLS series) once the three-level test is accepted.
+export const AREA_NOTE = table.areas.source;
+export const AREAS = [{ id: 'us', name: 'US average', tier: 'Baseline', factor: 1, also: 'usa national united states' },
+  ...table.areas.list.map((a) => ({ ...a, factor: a.wage / table.areas.usWage }))];
+const AREA_KEY = 'inspecto.area.v1';
+export function loadArea() {
+  try { return AREAS.find((a) => a.id === localStorage.getItem(AREA_KEY)) ?? AREAS[0]; } catch { return AREAS[0]; }
+}
+export function saveArea(area) {
+  try { localStorage.setItem(AREA_KEY, area.id); } catch { /* storage blocked: fine */ }
+}
+/** Typed text -> area, by name or by a known place inside it. */
+export function findArea(text) {
+  const q = text.trim().toLowerCase();
+  if (q.length < 2) return null;
+  return AREAS.find((a) => a.name.toLowerCase() === q) ?? AREAS.find((a) => `${a.name} ${a.also}`.toLowerCase().includes(q)) ?? null;
+}
+/** The test area closest to a position -> {area, km}. */
+export function nearestArea(lat, lon) {
+  const rad = Math.PI / 180;
+  const km = (a) => 2 * 6371 * Math.asin(Math.sqrt(Math.sin(((a.lat - lat) * rad) / 2) ** 2
+    + Math.cos(lat * rad) * Math.cos(a.lat * rad) * Math.sin(((a.lon - lon) * rad) / 2) ** 2));
+  return AREAS.filter((a) => a.lat).map((area) => ({ area, km: km(area) })).sort((a, b) => a.km - b.km)[0];
 }
 
 /** Sum of ranges; headline = midpoint rounded to $50. */

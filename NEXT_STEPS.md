@@ -21,8 +21,8 @@ ARCHITECTURE.md) on every new screen.
 | 5. Report page | Sonnet | medium | done |
 | 5b. Check a real photo | Sonnet | medium | done (by Fable) |
 | 5c. Photo on a wall of the 3D home | Sonnet | medium | done (by Fable) |
-| 5d. More real photos and more defect types, then retrain | Fable | high | proposed: **ask the owner which of 5d / 5e is next** |
-| 5e. Repair cost by location | Sonnet | medium | proposed (owner's idea) |
+| 5d. More real photos and more defect types, then retrain | Fable | high | **in progress**: data being collected, NOT trained yet (see step 5d) |
+| 5e. Repair cost by location | Sonnet | medium | three-level test done on the photo page (see step 5e) |
 | 6. Training game mode | Sonnet | medium | |
 | 7. Evaluation script | Sonnet | medium | |
 | 7b. Realism pass + detector retrain | Fable | high | done (numbers in "Training status") |
@@ -141,12 +141,39 @@ but called "water stain" at 52%. The model has no class for scuffs / impact dama
    label to a local folder, so their own photos become training data.
 4. `sh ml/retrain.sh`, then step 7's evaluation on real photos per class.
 
-### Step 5e (proposed, owner's idea): repair cost by location
+Status 2026-11-16 evening. The owner asked: collect the data, do NOT train (the laptop was
+about to be switched off; they start training themselves later).
+- `python3 ml/get_more_data.py` downloads into `data/extra/` and can be re-run: it skips
+  files it already has. Run it again first, the earlier run was cut short and only read the
+  first 50 files of each Commons category (now fixed).
+  - `data/extra/commons/<class>/`: Wikimedia Commons photos of peeling paint, mold and water
+    damage, CC0 / public domain / CC BY only (`attribution.csv`; share-alike files are listed
+    in `skipped.csv` and not downloaded, about two thirds of what exists). Class per image,
+    NO boxes. The "Water damage" subcategories are noisy (ships, floods): look before using.
+  - `data/extra/paint_defects/`: Roboflow "Paint Defects", CC BY 4.0, 743 images with COCO
+    boxes, mostly building exteriors. Classes: Spalling 1026, Crack 742, Paint_defect 453,
+    Dirt 256, Delamination 202 boxes (train split).
+- Still to do before training: (a) look at samples and map Paint_defect / Delamination ->
+  `peeling_paint`, Crack -> `crack`, drop the rest; (b) box the Commons photos by running the
+  current detector at a low threshold and keeping the image's own class; (c) add both to
+  `ml/combine.py` sources. None of this is written yet.
+- Searched and rejected: BD3 (about 4,000 photos with stain and peeling classes; no licence
+  stated, Kaggle account), Kasbah of Algiers set (224 px, no boxes), RF100 wall-damage
+  (classes are rotation levels). No free set with scuffs / chipped paint was found.
+- Best source not yet used: Roboflow Universe building-defect sets (CC BY 4.0, boxes). Needs
+  a free account and API key; the owner offered to sign up. Ask for the key as a file path.
 
-A city or ZIP input (photo page and report) that scales the cost ranges. Needs a free,
-public-domain source for the multiplier (US BLS wage data for painters / drywall installers
-by metro area is the first thing to check); never invent the numbers. WhatsApp strips GPS
-from photos, so the location must be typed, not read from the image.
+### Step 5e: repair cost by location — three-level test done
+
+Photo page only. "Where is this wall?": a search box and "Use my current location" (nearest
+of the three areas; nothing is sent anywhere). One location applies to all photos, because
+shared photos carry no GPS. `costOf(label, severity, factor)`; factor = local mean hourly
+wage of painters / US mean, BLS OEWS May 2025, fetched from the BLS public API
+(`api.bls.gov/publicAPI/v1/timeseries/data/`, series `OEUM00<area>00000047214103`):
+US 26.64 | New York metro (35620) 33.62 = +26% | Trenton-Princeton NJ (45940) 30.99 = +16% |
+Scranton-Wilkes-Barre PA (42540) 24.41 = -8%. Numbers live in `costs.json` ("areas").
+Not done: the 3D home and its report still use US-average prices; only three areas;
+wages are only the labour part of a price (the page says so). Never invent multipliers.
 
 ## Notes for step 6 (training game)
 

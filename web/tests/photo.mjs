@@ -15,7 +15,8 @@ const files = [
 ].map((f) => T + f);
 
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+// The browser reports a position on a university campus in Manhattan.
+const page = await browser.newPage({ viewport: { width: 1280, height: 900 }, permissions: ['geolocation'], geolocation: { latitude: 40.8075, longitude: -73.9626 } });
 const errors = [];
 page.on('pageerror', (e) => errors.push(String(e)));
 const check = (ok, msg) => { if (!ok) errors.push(msg); console.log(ok ? 'ok  ' : 'FAIL', msg); };
@@ -45,6 +46,24 @@ check((await page.locator('.photo .box').count()) === found, 'one box drawn per 
 let [low, high] = await sums();
 check(nums(await page.locator('.hero .range').innerText()).join() === [low, high].join(), `total range is the sum of all problems ($${low} – $${high})`);
 await page.screenshot({ path: `${out}/photo.png`, fullPage: true });
+
+// Location: three price levels, chosen by search or by the current position.
+check(await page.locator('.controls button', { hasText: 'Place on a wall' }).first().isVisible(), 'each photo offers "Place on a wall in the 3D home"');
+const pick = async (text) => { await page.fill('#area', text); await page.locator('#area').blur(); await page.waitForTimeout(300); return (await sums())[0]; };
+const us = low, scr = await pick('Scranton'), tre = await pick('trenton'), nyc = await pick('New York City metro (NY-NJ)');
+check(scr < us && us < tre && tre < nyc, `prices rise from outskirts to city ($${scr} < US $${us} < $${tre} < $${nyc})`);
+check(Math.abs(nyc / us - 33.62 / 26.64) < 0.03, 'New York is priced by the wage ratio (about +26%)');
+await pick('Paris');
+check((await page.locator('.loc-note').innerText()).includes('not in the price table') && (await sums())[0] === nyc, 'an unknown place is refused and the price is unchanged');
+await pick('US average');
+await page.locator('.loc button').click();
+await page.waitForFunction(() => document.querySelector('.loc-now b')?.textContent.includes('New York'));
+check((await page.locator('.loc-note').innerText()).includes('Nearest test area'), '"Use my current location" picks the nearest area (Manhattan -> New York)');
+await page.screenshot({ path: `${out}/photo-location.png` });
+await page.reload();
+await idle(3);
+check((await page.locator('.loc-now b').innerText()).includes('New York'), 'the location is remembered');
+await pick('US average');
 
 // Width drives the verdict: at 0.2 m nothing can be more than a small fix.
 const first = page.locator('.photo', { has: page.locator('.det') }).first();

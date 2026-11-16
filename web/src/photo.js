@@ -5,7 +5,7 @@ import './photo.css';
 import { h, safeImg } from './dom.js';
 import { detect } from './detect.js';
 import { saveWallPhoto } from './store.js';
-import { DEFECTS, COST_NOTE, SEVERITY_COLOR, nameOf, money, severityOf, costOf, totals } from './costs.js';
+import { DEFECTS, COST_NOTE, SEVERITY_COLOR, AREAS, AREA_NOTE, nameOf, money, severityOf, costOf, totals, loadArea, saveArea, findArea, nearestArea } from './costs.js';
 
 const KEY = 'inspecto.photos.v1';
 const VERDICT = { minor: 'Small fix', moderate: 'Needs repair', major: 'Serious issue' };
@@ -16,6 +16,8 @@ const range = (c) => `${money(c.low)} – ${money(c.high)}`;
 let photos = load(); // [{n, thumb, aspect, widthM, detections: [{label, score, box}]}], newest first
 let status = null; // {text, error}
 let busy = false;
+let area = loadArea(); // one location for all photos: shared photos carry no GPS
+let areaNote = '';
 
 function load() {
   try { const v = JSON.parse(localStorage.getItem(KEY)); return Array.isArray(v) ? v : []; } catch { return []; }
@@ -30,7 +32,7 @@ function price(p) {
     const [x1, y1, x2, y2] = d.box.map((v) => Math.min(1, Math.max(0, Number(v))));
     const w = (x2 - x1) * p.widthM, ht = ((y2 - y1) * p.widthM) / p.aspect;
     const severity = severityOf(d.label, w, ht);
-    return { ...d, box: [x1, y1, x2, y2], sizeM: [w, ht], severity, cost: costOf(d.label, severity) };
+    return { ...d, box: [x1, y1, x2, y2], sizeM: [w, ht], severity, cost: costOf(d.label, severity, area.factor) };
   });
 }
 
@@ -113,6 +115,38 @@ function notice() {
     `${COST_NOTE} Photos are analyzed on this laptop and never uploaded.`);
 }
 
+function setArea(next, note = '') {
+  if (next) { area = next; saveArea(next); }
+  areaNote = note;
+  render();
+}
+
+function location() {
+  const search = h('input', { type: 'search', list: 'areas', id: 'area', placeholder: 'Search: New York, Trenton, Scranton…', autocomplete: 'off' });
+  search.addEventListener('change', () => {
+    if (!search.value.trim()) return;
+    const hit = findArea(search.value);
+    setArea(hit, hit ? '' : `"${search.value}" is not in the price table yet. The three test areas are New York City, Trenton-Princeton and Scranton-Wilkes-Barre.`);
+  });
+  const locate = h('button', { class: 'ghost', text: 'Use my current location' });
+  locate.addEventListener('click', () => {
+    if (!navigator.geolocation) { setArea(null, 'This browser cannot share a location. Search instead.'); return; }
+    locate.disabled = true;
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => { const n = nearestArea(coords.latitude, coords.longitude); setArea(n.area, `Nearest test area to you, about ${Math.round(n.km)} km away.`); },
+      () => setArea(null, 'Your location could not be read (permission denied or unavailable). Search instead.'),
+      { timeout: 10000 });
+  });
+  const pct = Math.round((area.factor - 1) * 100);
+  return h('section', { class: 'loc panel' },
+    h('label', { for: 'area', class: 'label', text: 'Where is this wall?' }),
+    h('div', { class: 'loc-row' }, search, h('datalist', { id: 'areas' }, AREAS.map((a) => h('option', { value: a.name }))), locate),
+    h('div', { class: 'loc-now' }, h('b', { text: area.name }), h('span', { class: 'sev', text: area.tier }),
+      h('span', { text: pct ? `repair prices ${pct > 0 ? '+' : '−'}${Math.abs(pct)}% against the US average` : 'US-average repair prices' })),
+    areaNote ? h('p', { class: 'loc-note', role: 'status', text: areaNote }) : null,
+    h('p', { class: 'loc-src', text: `Local factor: ${AREA_NOTE}. Wages are only part of a repair price, so treat this as a rough adjustment.` }));
+}
+
 function hero(found) {
   const t = totals(found);
   return h('section', { class: 'hero' },
@@ -190,6 +224,7 @@ function render() {
   root.replaceChildren(h('main', { class: 'wrap' },
     header(),
     notice(),
+    location(),
     photos.length ? hero(found) : null,
     drop(),
     status ? h('p', { class: `status${status.error ? ' error' : ''}`, role: 'status', text: status.text }) : null,

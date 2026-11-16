@@ -1,6 +1,15 @@
 {
   "currency": "USD",
   "note": "Rough hand-built US repair-cost ranges for triage only. Not quotes. Real prices vary a lot by region, access and hidden damage.",
+  "areas": {
+    "source": "US Bureau of Labor Statistics, OEWS May 2025: mean hourly wage of painters (construction and maintenance), compared with the US mean",
+    "usWage": 26.64,
+    "list": [
+      { "id": "nyc", "name": "New York City metro (NY-NJ)", "tier": "Highest", "wage": 33.62, "lat": 40.7128, "lon": -74.006, "also": "nyc manhattan brooklyn queens bronx staten island newark jersey city hoboken columbia" },
+      { "id": "trenton", "name": "Trenton-Princeton, NJ", "tier": "Medium", "wage": 30.99, "lat": 40.2206, "lon": -74.7597, "also": "new jersey mercer ewing hamilton" },
+      { "id": "scranton", "name": "Scranton-Wilkes-Barre, PA (outskirts)", "tier": "Lowest", "wage": 24.41, "lat": 41.409, "lon": -75.6624, "also": "pennsylvania poconos hazleton outskirts rural" }
+    ]
+  },
   "labels": {
     "crack": {
       "name": "Crack", "measure": "length", "urgency": "monitor",
