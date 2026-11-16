@@ -27,14 +27,15 @@ export function createFx(renderer, scene, camera) {
   const composer = new EffectComposer(renderer, new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 }));
   composer.addPass(new RenderPass(scene, camera));
   const ao = new GTAOPass(scene, camera);
-  ao.updateGtaoMaterial({ radius: 0.55, distanceExponent: 1.4, thickness: 1.2, scale: 1.25, samples: 12 });
-  ao.updatePdMaterial({ radius: 8, rings: 4, samples: 16 }); // smoother denoise, less speckle on edges
+  ao.updateGtaoMaterial({ radius: 0.55, distanceExponent: 1.4, thickness: 1.2, scale: 1.25, samples: 8 });
+  ao.updatePdMaterial({ radius: 6, rings: 2, samples: 8 }); // smoother denoise, less speckle on edges
   composer.addPass(ao);
   composer.addPass(new UnrealBloomPass(new THREE.Vector2(256, 256), 0.07, 0.45, 3.0)); // threshold in linear HDR: windows and lamps only
   composer.addPass(new OutputPass());
   const grade = new ShaderPass(Grade);
   composer.addPass(grade);
   return {
+    ao, // the costly pass: main.js switches it off on slower GPUs
     setSize(w, h) { composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h); },
     render(time) {
       grade.uniforms.time.value = time % 10;

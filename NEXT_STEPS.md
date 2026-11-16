@@ -128,5 +128,11 @@ those views reuse training decals. SDNET2018 is optional.
 - "Damaged tile" has no free labeled data; it is derived from crack + tile surface.
 - Pin size is measured from the screen box, so thin diagonal defects on ceilings read larger
   than they are (10% of pins were off by more than 90% in size in the pin test; median 10%).
-- Post-processing was only checked in headless software rendering, not on the real GPU.
+- Performance: the owner reported heavy lag. Measured on the real GPU with
+  `cd web && node tests/perf.mjs "?fx=auto"` while training was running: full effects at
+  retina resolution 5 fps, effects at 1x 21 fps, plain 50 fps. `main.js` now has a quality
+  governor (`LEVELS`, `govern`) that steps down when under 40 fps, so during training it
+  settles on plain rendering. Re-measure after training ends; if effects still cannot hold
+  40 fps, cheapen `fx.js` (drop MSAA samples or the AO pass) rather than removing the governor.
+- Editing any file under `web/src` reloads the owner's open browser tab (Vite). Expected.
 - Stale files that can be ignored: `models/smoke` (trial run), `models_smoke.log`, `synth.log`.

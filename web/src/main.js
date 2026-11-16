@@ -13,7 +13,6 @@ import './style.css';
 const $ = (s) => document.querySelector(s);
 const canvas = $('#view');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
 const scene = new THREE.Scene();
@@ -27,9 +26,29 @@ const house = buildHouse(scene);
 const walk = createWalk(camera, canvas, house.colliders);
 const SPAWN = [4.6, 3.4, 0.6];
 
-// Post-processing is for people. Automated runs (tests, data rendering) skip it unless ?fx=1.
+// Quality levels, cheapest first. Full retina resolution with every effect ran at 5 fps on an
+// M3, so for people a governor (below) picks the best level the GPU can hold. Automated runs
+// (tests, data rendering) stay on plain rendering unless ?fx=1; ?fx=0 forces plain.
+const LEVELS = [{ pr: 1 }, { pr: 1.5 }, { pr: 1, fx: true }, { pr: 1, fx: true, ao: true }, { pr: 1.5, fx: true, ao: true }];
 const fxParam = new URLSearchParams(location.search).get('fx');
-const fx = (fxParam ? fxParam !== '0' : !navigator.webdriver) ? createFx(renderer, scene, camera) : null;
+const auto = fxParam === 'auto' || (!fxParam && !navigator.webdriver);
+let level = fxParam === '1' ? 3 : auto ? 2 : 1, ceiling = LEVELS.length - 1, fx = null;
+function applyLevel() {
+  const q = LEVELS[level];
+  renderer.setPixelRatio(Math.min(q.pr, devicePixelRatio));
+  if (q.fx) (fx ??= createFx(renderer, scene, camera)).ao.enabled = !!q.ao;
+  resize();
+}
+const gov = { t: 0, n: 0 };
+function govern(dt) {
+  if (!auto || dt > 0.25) return; // hidden tab or a one-off hitch is not a measurement
+  gov.t += dt; gov.n++;
+  if (gov.t < 1.5) return;
+  const fps = gov.n / gov.t;
+  gov.t = gov.n = 0;
+  if (fps < 40 && level > 0) { ceiling = --level; applyLevel(); } // never retry a level that was too slow
+  else if (fps > 56 && level < ceiling) { level++; applyLevel(); }
+}
 
 const resize = () => {
   renderer.setSize(innerWidth, innerHeight, false);
@@ -38,7 +57,7 @@ const resize = () => {
   camera.updateProjectionMatrix();
 };
 addEventListener('resize', resize);
-resize();
+applyLevel();
 
 export const app = { THREE, renderer, scene, camera, house, walk, planted: [] };
 
@@ -171,6 +190,7 @@ const clock = new THREE.Clock();
 let roomName = '', lastPick = 0;
 renderer.setAnimationLoop(() => {
   const dt = clock.getDelta(), t = clock.elapsedTime;
+  govern(dt);
   if (live()) walk.update(dt);
   else { // slow orbit behind the start screen, always looking across the living room
     const dx = 1.9 * Math.cos(t * 0.09 + 0.9), dz = 1.2 * Math.sin(t * 0.09 + 0.9);
@@ -192,7 +212,7 @@ renderer.setAnimationLoop(() => {
       if (f) chip.textContent = `#${f.n} ${nameOf(f.label)} · E for details`;
     }
   }
-  if (fx) fx.render(t); else renderer.render(scene, camera);
+  if (LEVELS[level].fx) fx.render(t); else renderer.render(scene, camera);
 });
 
 $('#enter').disabled = false;
@@ -202,6 +222,7 @@ $('#enter-cta').textContent = 'Start inspection →';
 const truth = (shot) => visibleBoxes(shot.camera, app.planted, house.occluders).map((b) => ({ ...b, score: 0.9 }));
 window.inspecto = {
   app, pins, teleport: walk.teleport, analyze, replant, rng,
+  quality: () => level, // current LEVELS index chosen by the governor
   analyzeTruth: () => analyze(truth), // pin the ground-truth boxes instead of asking the detector
   planted: () => app.planted.map(({ mesh, ...d }) => d),
   randomPose: (rand) => randomPose(rand, app.planted, house.colliders),
