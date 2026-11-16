@@ -143,20 +143,22 @@ but called "water stain" at 52%. The model has no class for scuffs / impact dama
 
 Status 2026-11-16 evening. The owner asked: collect the data, do NOT train (the laptop was
 about to be switched off; they start training themselves later).
-- `python3 ml/get_more_data.py` downloads into `data/extra/` and can be re-run: it skips
-  files it already has. Run it again first, the earlier run was cut short and only read the
-  first 50 files of each Commons category (now fixed).
-  - `data/extra/commons/<class>/`: Wikimedia Commons photos of peeling paint, mold and water
-    damage, CC0 / public domain / CC BY only (`attribution.csv`; share-alike files are listed
-    in `skipped.csv` and not downloaded, about two thirds of what exists). Class per image,
-    NO boxes. The "Water damage" subcategories are noisy (ships, floods): look before using.
-  - `data/extra/paint_defects/`: Roboflow "Paint Defects", CC BY 4.0, 743 images with COCO
-    boxes, mostly building exteriors. Classes: Spalling 1026, Crack 742, Paint_defect 453,
-    Dirt 256, Delamination 202 boxes (train split).
-- Still to do before training: (a) look at samples and map Paint_defect / Delamination ->
-  `peeling_paint`, Crack -> `crack`, drop the rest; (b) box the Commons photos by running the
-  current detector at a low threshold and keeping the image's own class; (c) add both to
-  `ml/combine.py` sources. None of this is written yet.
+- `python3 ml/get_more_data.py` downloads into `data/extra/commons/<class>/` and can be
+  re-run: it skips files it already has. If `data_extra.log` does not end with
+  "extra data: done", run it again (about 10 minutes; Wikimedia throttles faster downloads).
+  Wikimedia Commons photos of peeling paint and mold, CC0 / public domain / CC BY only
+  (`attribution.csv`; share-alike files are listed in `skipped.csv` and not downloaded, about
+  two thirds of what exists). Expect roughly 150 photos. Class per image, NO boxes.
+- NOT usable, ignore or delete (ask the owner before deleting, about 250 MB):
+  `data/extra/paint_defects/` (street views of whole buildings: graffiti and tiny marks, some
+  from Street View and stock sites, so the CC BY claim is doubtful) and
+  `data/extra/commons/water_seepage/` (6 files from a noisy category: ships, floods).
+- Still to do before training: (a) box the Commons photos by running the current detector at
+  a low threshold and keeping the image's own class, then look at a contact sheet; (b) add the
+  result to `ml/combine.py` sources. Not written yet. Until then `sh ml/retrain.sh` would
+  only repeat the last training on the same data: do not run it.
+- Honest size of the gain: about 150 peeling-paint / mold photos, nothing new for water
+  stains or scuffs. Not worth a 1.5 hour training on its own.
 - Searched and rejected: BD3 (about 4,000 photos with stain and peeling classes; no licence
   stated, Kaggle account), Kasbah of Algiers set (224 px, no boxes), RF100 wall-damage
   (classes are rotation levels). No free set with scuffs / chipped paint was found.
