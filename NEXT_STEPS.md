@@ -18,7 +18,8 @@ ARCHITECTURE.md) on every new screen.
 | 2. Load scene with walk controls | Fable | medium | done |
 | 3. Defect detection pipeline | Fable | medium | done (final weights: see "Training status") |
 | 4. Pinning findings in 3D | Fable | high | done |
-| 5. Report page | Sonnet | medium | **next** (files written, never run: write `tests/report.mjs`, test, fix) |
+| 5. Report page | Sonnet | medium | done |
+| 5b. Check a real photo, 5c. photo on a wall | Sonnet | medium | **next** |
 | 6. Training game mode | Sonnet | medium | |
 | 7. Evaluation script | Sonnet | medium | |
 | 7b. Realism pass + detector retrain | Fable | high | done early (look is final; retrain running, see "Training status") |
@@ -37,6 +38,7 @@ error, best guess) and ask the owner to switch to Fable at high effort.
     cd web && node tests/pins.mjs <outDir>           # pinning accuracy, card, persistence
     cd web && node tests/detect-eval.mjs 3 20        # in-app detector precision/recall
     cd web && node tests/shots.mjs <outDir>          # screenshots with post-processing
+    cd web && node tests/report.mjs <outDir>         # report page: totals, offer maths, print, clearing
 
 Both servers may still be running from the previous session (`curl -s localhost:8000/api/health`).
 Tests run headless with software rendering at about 3 fps, so use generous timeouts.
@@ -45,19 +47,16 @@ Look at screenshots (Read the PNG) after every UI change.
 ## Training status (do this first)
 
 The home's look changed in step 7b (baked lighting, real windows), so the detector is being
-retrained for it. `sh ml/retrain.sh` was started 2026-11-16 13:40 in the background
-(log `retrain.log`). It runs unattended, in this order:
+retrained for it by `sh ml/retrain.sh` (log `retrain.log`). The first run finished 13:42
+(5 epochs, best EMA metric 0.62). The 1,360 new-look views were rendered and checked
+(1,200 train + 160 valid, labels sane), so **editing `web/src` is safe again**. The last
+stage started 2026-11-16 13:46: 4 epochs into `models/run2`, about 80 min, then it copies
+the result to `models/detector.pth` and prints "retrain: done".
 
-1. waits for the first training run (`models/run`, 5 epochs, validation mAP50
-   0.44 -> 0.67 -> 0.73 -> 0.76 -> 0.77 so far) to finish, about 13:50;
-2. re-renders 1,360 labeled views of the new-look home into `data/synth` (about 12 min);
-3. merges them with the real photos and trains 4 more epochs into `models/run2` (about 80 min);
-4. copies the result to `models/detector.pth` and prints "retrain: done".
-
-**While step 2 is running, do not edit anything under `web/src` or `web/public`**: Vite
-reloads the page and the render script dies. It is safe once `retrain.log` shows the
-"160 images" line. If the chain died (no `ml/train.py` or `synth.mjs` process and no
-"retrain: done" in `retrain.log`), just run it again: `nohup sh ml/retrain.sh > retrain.log 2>&1 &`.
+If the chain died (no `ml/train.py` process and no "retrain: done" in `retrain.log`), run it
+again: `nohup sh ml/retrain.sh > retrain.log 2>&1 &` (it re-renders too, about 5 min, and
+during that render `web/src` and `web/public` must not be edited: Vite reloads the page and
+the render script dies; safe once `retrain.log` shows the "160 images" line).
 
 Until it finishes, `models/detector.pth` is a mid-run checkpoint trained on the OLD look, so
 in-app detections are unreliable. When `retrain.log` says "retrain: done":
@@ -78,34 +77,16 @@ Training memory: batch 4 holds about 5 GB. Never raise the batch size or worker 
 - Step 3: data (`ml/get_data.py`), decals (`ml/make_decals.py`), planting (`defects.js`),
   capture + detect (`detect.js`), server (`server/`), rendered training views
   (`web/tests/synth.mjs`), `ml/combine.py`, `ml/train.py`.
+- Step 5: `report.js` + `report.css` (grouped findings, totals, offer adjustment, print CSS,
+  two-click clear). `tests/report.mjs` passes (12 checks); screen and print screenshots checked.
+  `SEVERITY_COLOR` now lives in `costs.js`, so the report bundle no longer pulls in three.js.
 - Step 4: `pins.js` (raycast pinning, dedupe, picking), `costs.json` + `costs.js`, `store.js`,
   detail card, minimap, post-processing, new visual design. Pin test: median position error
   1.7 cm, no duplicates, no wrong rooms across 6 random homes.
 
-## Exact next step: step 5 (report page)
+## Exact next step: step 5b, then 5c
 
-`web/report.html` is an empty placeholder (already a Vite entry). Build `web/src/report.js`:
-
-- Read findings with `loadFindings()` from `store.js` (shape in ARCHITECTURE.md; each has
-  `n, label, roomName, surface, material, sizeM, areaM2, severity, score, cost{low,high}, thumb`).
-- Group by room. Per room: subtotal range and a table or cards of findings (thumb, `#n`, name
-  via `nameOf`, severity chip, size, confidence, cost range, `DEFECTS[label].cause/action`).
-- Totals with `totals()` from `costs.js`: low to high, headline midpoint. Offer adjustment:
-  an asking-price input; show suggested offer = asking minus midpoint, the low/high range,
-  and the percentage. Flag `urgency: "urgent"` items and all `major` items as
-  "get a specialist quote before offering".
-- Clear disclaimer at the top and bottom: visual triage only, not a licensed inspection;
-  costs are rough estimates (`COST_NOTE`); "damaged tile" is inferred from a crack on a tiled
-  surface.
-- Empty state when there are no findings, a "Back to the home" link, a Print button
-  (add print CSS: white background, no glass), and "Start a new inspection" that clears the
-  findings after a confirm.
-- Build DOM with `textContent`, not `innerHTML` with stored data.
-- Style: import `./style.css` for tokens, then add report styles (the page scrolls, so
-  override `body { overflow: auto }`). Editorial layout: big serif total, mono labels,
-  `.panel.ticks` cards. Screenshot it and check it looks finished.
-
-## Step 5b: check a real photo (added at the owner's request, build right after the report)
+### Step 5b: check a real photo (added at the owner's request)
 
 The owner asked how the app is useful for a real home. Answer: let them upload a photo.
 
@@ -204,5 +185,3 @@ If you change geometry, furniture or lights: rebake (`node tests/bake.mjs 96 3`)
   `bake.log`, `web/public/textures/*` unused by `house.js`.
 - `tests/shots.mjs` (README screenshots) runs in software rendering; prefer the real-GPU
   launch options from `tests/look.mjs` for final screenshots.
-- The report page reads `SEVERITY_COLOR` from `pins.js`, which pulls three.js into the report
-  bundle. Move the constant to `costs.js` and import it from there in both files.

@@ -1,6 +1,6 @@
 // Floor-plan minimap: rooms, the player's position and heading, and pins.
 import { ROOMS } from './house.js';
-import { SEVERITY_COLOR } from './pins.js';
+import { SEVERITY_COLOR } from './costs.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const el = (tag, attrs) => {

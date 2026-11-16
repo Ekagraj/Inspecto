@@ -1,11 +1,10 @@
 // Turn 2D detections into findings pinned at their 3D location.
 import * as THREE from 'three';
 import { describeHit } from './house.js';
-import { severityOf, costOf } from './costs.js';
+import { severityOf, costOf, SEVERITY_COLOR } from './costs.js';
 import { loadFindings, saveFindings } from './store.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
-export const SEVERITY_COLOR = { minor: '#ffb224', moderate: '#ff7a2f', major: '#ff4d4d' };
 const ray = new THREE.Raycaster();
 const ndc = (u, v) => new THREE.Vector2(u * 2 - 1, 1 - v * 2);
 

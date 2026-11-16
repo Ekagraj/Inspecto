@@ -67,6 +67,7 @@ body.report { overflow: auto; background:
   .item .cost { margin-left: 0; }
 }
 @media print {
+  html { background: #fff; }
   body.report { background: #fff; color: #111; overflow: visible; }
   .bar .btn, .bar button, .foot button, .field, .empty a { display: none !important; }
   .panel, .stats, .stats > div, .notice, .item img { background: #fff !important; backdrop-filter: none; border-color: #bbb; color: #111; }

@@ -2,8 +2,7 @@
 import './style.css';
 import './report.css';
 import { loadFindings, saveFindings } from './store.js';
-import { DEFECTS, COST_NOTE, nameOf, money, totals } from './costs.js';
-import { SEVERITY_COLOR } from './pins.js';
+import { DEFECTS, COST_NOTE, SEVERITY_COLOR, nameOf, money, totals } from './costs.js';
 
 const ROOM_ORDER = ['living', 'kitchen', 'hall', 'bedroom', 'bath'];
 const ASKING_KEY = 'inspecto.asking.v1';
@@ -35,7 +34,7 @@ function writeAsking(n) {
 const DISCLAIMER = h('div', { class: 'notice', role: 'note' },
   h('b', { text: 'Visual triage, not a licensed inspection. ' }),
   'This report comes from an AI looking at images of the home. It can miss defects, mislabel them and cannot see behind walls. ',
-  `Repair costs are rough, hand-built estimates, not quotes (${COST_NOTE.replace(/\.$/, '')}). `,
+  `${COST_NOTE} `,
   'A "damaged tile" is inferred from a crack on a tiled surface. Get a licensed inspector and contractor quotes before you make or accept an offer.');
 
 function header() {

@@ -3,6 +3,7 @@ import table from './costs.json';
 
 export const DEFECTS = table.labels;
 export const COST_NOTE = table.note;
+export const SEVERITY_COLOR = { minor: '#ffb224', moderate: '#ff7a2f', major: '#ff4d4d' };
 export const nameOf = (label) => DEFECTS[label]?.name ?? label;
 export const money = (n) => `$${Math.round(n).toLocaleString('en-US')}`;
 

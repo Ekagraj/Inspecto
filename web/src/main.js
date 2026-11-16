@@ -4,10 +4,10 @@ import { buildHouse, roomAt } from './house.js';
 import { createWalk } from './walk.js';
 import { loadDecals, plantDefects, clearDefects, visibleBoxes, randomPose, rng } from './defects.js';
 import { capture, detect } from './detect.js';
-import { createPins, SEVERITY_COLOR } from './pins.js';
+import { createPins } from './pins.js';
 import { createMinimap } from './minimap.js';
 import { createFx } from './fx.js';
-import { DEFECTS, nameOf, money, totals } from './costs.js';
+import { DEFECTS, SEVERITY_COLOR, nameOf, money, totals } from './costs.js';
 import './style.css';
 
 const $ = (s) => document.querySelector(s);
