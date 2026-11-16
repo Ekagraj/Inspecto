@@ -47,6 +47,24 @@ button:disabled { opacity: 0.5; cursor: default; }
 #start small { display: block; margin-top: 16px; color: var(--muted); font: 11px/1.5 var(--mono); }
 
 #status { color: var(--muted); }
+#count { color: var(--paper); text-decoration: none; pointer-events: auto; }
+#count:hover { color: var(--amber); }
+#chip { top: calc(50% + 22px); left: 50%; transform: translateX(-50%); padding: 5px 10px; white-space: nowrap; }
+
+#card { top: 64px; right: 14px; width: 300px; pointer-events: auto; font-family: var(--sans); font-size: 13px; letter-spacing: 0; }
+#card img { display: block; width: 100%; max-height: 170px; object-fit: cover; background: var(--ink-2); border-bottom: 1px solid var(--line); }
+.card-body { padding: 14px; }
+.card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.card-head h2 { margin: 0; font-size: 17px; flex: 1; }
+#card-n { font: 700 12px var(--mono); color: var(--muted); }
+.sev { font: 700 10px var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink); padding: 3px 7px; }
+#card dl { display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; margin: 0 0 10px; }
+#card dt { font: 11px var(--mono); color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; padding-top: 1px; }
+#card dd { margin: 0; }
+#card p { margin: 0 0 8px; color: var(--muted); line-height: 1.45; }
+#card .row { display: flex; gap: 8px; margin-top: 12px; }
+#card .row button { flex: 1; padding: 8px 6px; font-size: 11px; }
+#card kbd { border-color: var(--line); margin-left: 4px; }
 #analyze { top: 14px; right: 14px; }
 kbd { font: inherit; margin-left: 8px; padding: 1px 5px; border: 1px solid color-mix(in srgb, var(--ink) 50%, transparent); }
 #boxes { inset: 0; }

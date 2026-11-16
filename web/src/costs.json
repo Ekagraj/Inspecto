@@ -1,0 +1,42 @@
+{
+  "currency": "USD",
+  "note": "Rough hand-built US repair-cost ranges for triage only. Not quotes. Real prices vary a lot by region, access and hidden damage.",
+  "labels": {
+    "crack": {
+      "name": "Crack", "measure": "length", "urgency": "monitor",
+      "cause": "Usually settling or seasonal movement in plaster or drywall. Wide, long or growing cracks can point to structural movement.",
+      "action": "Fill and repaint small cracks. Have a structural engineer look at cracks wider than about 3 mm or longer than a metre.",
+      "minor": [100, 350], "moderate": [300, 900], "major": [1000, 4000]
+    },
+    "stairstep_crack": {
+      "name": "Stair-step crack", "measure": "length", "urgency": "urgent",
+      "cause": "A zig-zag crack that follows mortar joints. It often means the foundation is settling unevenly.",
+      "action": "Get a structural engineer or foundation specialist to assess it before making an offer.",
+      "minor": [400, 1200], "moderate": [1500, 5000], "major": [5000, 15000]
+    },
+    "mold": {
+      "name": "Mold", "measure": "area", "urgency": "soon",
+      "cause": "Persistent moisture: a leak, condensation or poor ventilation. It keeps coming back until the moisture source is fixed.",
+      "action": "Find and fix the moisture source, then clean or remove the affected material. Large areas need professional remediation.",
+      "minor": [150, 500], "moderate": [500, 2000], "major": [2000, 6000]
+    },
+    "peeling_paint": {
+      "name": "Peeling paint", "measure": "area", "urgency": "monitor",
+      "cause": "Moisture behind the paint, poor surface preparation or age. In homes built before 1978 old paint may contain lead.",
+      "action": "Scrape, prime and repaint. Check for a moisture source, and test for lead in older homes before sanding.",
+      "minor": [100, 300], "moderate": [300, 900], "major": [800, 2500]
+    },
+    "water_seepage": {
+      "name": "Water stain / seepage", "measure": "area", "urgency": "soon",
+      "cause": "Water getting in from a roof or plumbing leak, or seeping through a wall. A stain may be old and dry, or still active.",
+      "action": "Trace the source and check whether it is still wet. Fix the leak first, then replace damaged material and repaint.",
+      "minor": [200, 600], "moderate": [600, 2500], "major": [2500, 8000]
+    },
+    "damaged_tile": {
+      "name": "Damaged tile", "measure": "length", "urgency": "monitor",
+      "cause": "Impact, movement in the surface underneath, or water getting behind the tiles.",
+      "action": "Replace the cracked tiles and regrout. Check that water has not reached the wall or floor behind them.",
+      "minor": [150, 400], "moderate": [400, 1200], "major": [1200, 3500]
+    }
+  }
+}

@@ -14,11 +14,36 @@
       <span class="brand">INSPECTO</span>
       <span id="room">—</span>
       <span id="status">Ready</span>
+      <a id="count" href="/report.html">No findings yet</a>
     </div>
     <div id="boxes" class="hud"></div>
     <div id="crosshair" class="hud"></div>
+    <div id="chip" class="hud panel" hidden></div>
     <button id="analyze" class="hud">Analyze this view <kbd>Space</kbd></button>
-    <div id="hint" class="hud panel"><b>WASD</b> move · <b>Mouse</b> look · <b>Shift</b> run · <b>Space</b> analyze · <b>Esc</b> release cursor</div>
+    <div id="hint" class="hud panel"><b>WASD</b> move · <b>Mouse</b> look · <b>Shift</b> run · <b>Space</b> analyze · <b>E</b> pin details · <b>Esc</b> release cursor</div>
+
+    <aside id="card" class="hud panel" hidden aria-live="polite">
+      <img id="card-thumb" alt="Captured view of this finding" />
+      <div class="card-body">
+        <div class="card-head">
+          <span id="card-n"></span>
+          <h2 id="card-title"></h2>
+          <span id="card-sev" class="sev"></span>
+        </div>
+        <dl>
+          <dt>Location</dt><dd id="card-where"></dd>
+          <dt>Size</dt><dd id="card-size"></dd>
+          <dt>Confidence</dt><dd id="card-score"></dd>
+          <dt>Repair</dt><dd id="card-cost"></dd>
+        </dl>
+        <p id="card-cause"></p>
+        <p id="card-action"></p>
+        <div class="row">
+          <button id="card-remove" class="ghost">Not a defect <kbd>X</kbd></button>
+          <button id="card-close" class="ghost">Close <kbd>E</kbd></button>
+        </div>
+      </div>
+    </aside>
 
     <div id="start">
       <div class="card panel">
