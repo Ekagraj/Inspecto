@@ -1,0 +1,47 @@
+/* Look: a surveyor's field instrument. Ink panels, paper text, one signal-amber accent. */
+:root {
+  --ink: #14181c;
+  --ink-2: #1e252b;
+  --line: #36414a;
+  --paper: #f2ede3;
+  --muted: #9aa5ad;
+  --amber: #ffb224;
+  --red: #ff5d4d;
+  --green: #5fd38d;
+  --mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --sans: 'Inter Tight', 'Avenir Next', 'Helvetica Neue', sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--ink); color: var(--paper); font-family: var(--sans); }
+body { overflow: hidden; }
+[hidden] { display: none !important; }
+#view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+.hud { position: fixed; pointer-events: none; font-family: var(--mono); font-size: 12px; letter-spacing: 0.04em; }
+.panel { background: color-mix(in srgb, var(--ink) 88%, transparent); border: 1px solid var(--line); backdrop-filter: blur(6px); }
+#topbar { top: 14px; left: 14px; display: flex; align-items: stretch; }
+#topbar > * { padding: 8px 12px; border-right: 1px solid var(--line); }
+#topbar > *:last-child { border-right: 0; }
+.brand { font-weight: 700; color: var(--ink); background: var(--amber); letter-spacing: 0.12em; }
+#room { min-width: 110px; text-transform: uppercase; }
+#hint { bottom: 14px; left: 50%; transform: translateX(-50%); padding: 7px 12px; color: var(--muted); white-space: nowrap; }
+#hint b { color: var(--paper); font-weight: 500; }
+#crosshair { top: 50%; left: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px;
+  background: linear-gradient(var(--paper), var(--paper)) center / 2px 100% no-repeat, linear-gradient(var(--paper), var(--paper)) center / 100% 2px no-repeat;
+  mix-blend-mode: difference; opacity: 0.8; }
+
+button { font: 600 12px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink); background: var(--amber);
+  border: 0; padding: 10px 16px; cursor: pointer; pointer-events: auto; }
+button:hover { background: #ffc552; }
+button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
+button.ghost { background: transparent; color: var(--paper); border: 1px solid var(--line); }
+button.ghost:hover { border-color: var(--paper); background: transparent; }
+button:disabled { opacity: 0.5; cursor: default; }
+
+#start { position: fixed; inset: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--ink) 78%, transparent); }
+#start .card { width: min(520px, calc(100vw - 32px)); padding: 28px; }
+#start h1 { margin: 0 0 6px; font-size: 34px; letter-spacing: -0.02em; line-height: 1.05; }
+#start h1 em { font-style: normal; color: var(--amber); }
+#start p { color: var(--muted); line-height: 1.5; margin: 0 0 18px; }
+#start .row { display: flex; gap: 10px; flex-wrap: wrap; }
+#start small { display: block; margin-top: 16px; color: var(--muted); font: 11px/1.5 var(--mono); }

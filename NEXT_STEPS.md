@@ -10,8 +10,8 @@ commit and update this file after every step.
 | Step | Model | Effort | Status |
 |---|---|---|---|
 | 1. Machine check and architecture plan | Fable | high | done |
-| 2. Load scene with walk controls | Fable | medium | **next** |
-| 3. Defect detection pipeline | Fable | medium | |
+| 2. Load scene with walk controls | Fable | medium | done |
+| 3. Defect detection pipeline | Fable | medium | **next** |
 | 4. Pinning findings in 3D | Fable | high | |
 | 5. Report page | Sonnet | medium | |
 | 6. Training game mode | Sonnet | medium | |
@@ -27,25 +27,11 @@ the error, best guess) and ask the owner to switch to Fable at high effort.
 ## Done
 
 - Step 1: machine checked, plan written (ARCHITECTURE.md), git repo started.
+- Step 2: `web/` Vite app. `house.js` builds the 5-room apartment (exports `ROOMS`, `WINDOWS`, `roomAt(x,z)`, `describeHit(point, normal)`, `buildHouse(scene)` -> `{surfaces, occluders, colliders, ready}`). `walk.js` has look/WASD/collision. `window.inspecto = {app, teleport(x,z,yaw,pitch), ready}`. Smoke test passes headless.
 
-## Exact next step: step 2 (scene + walk controls)
+## Exact next step: step 3 (detection pipeline)
 
-1. `npm create vite@latest web -- --template vanilla`, add `three`, and
-   `playwright` as a dev dependency. Run `npx playwright install chromium` if the
-   cached build does not match. Check the current three.js docs before coding
-   (WebFetch on threejs.org docs; Context7 if it is available).
-2. `web/src/house.js`: floor plan as data, builder for box walls with door gaps,
-   floors, ceilings, lights. Export `surfaces` (meshes with
-   `userData = {surface, material}`), `roomAt(point)`, wall rectangles for collision.
-3. `web/src/walk.js`: PointerLockControls, WASD + shift, eye height 1.6 m,
-   circle-vs-rectangle collision. Mouse-drag look when pointer lock is unavailable.
-4. CC0 Poly Haven textures (1k JPG) and a few furniture models through
-   `https://api.polyhaven.com/files/<asset>`; keep `web/public` under about 40 MB
-   and commit it.
-5. `window.inspecto.teleport()` hook, then `web/tests/smoke.mjs`: open the app
-   headless, teleport to each room, screenshot, fail on console errors. Look at
-   the screenshots before moving on.
-6. Commit, update this file, continue to step 3 (same model and effort).
+See the notes below. Dev server: `npm --prefix web run dev`; test: `cd web && node tests/smoke.mjs <outDir>`.
 
 ## Notes for step 3
 

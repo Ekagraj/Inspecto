@@ -1,0 +1,17 @@
+{
+  "name": "ai-home-inspector-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "test": "node tests/smoke.mjs"
+  },
+  "dependencies": {
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.65.1",
+    "vite": "^8.3.8"
+  }
+}

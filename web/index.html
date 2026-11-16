@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Home Inspector</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;600;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+
+    <div id="topbar" class="hud panel">
+      <span class="brand">INSPECTO</span>
+      <span id="room">—</span>
+    </div>
+    <div id="crosshair" class="hud"></div>
+    <div id="hint" class="hud panel"><b>WASD</b> move · <b>Mouse</b> look · <b>Shift</b> run · <b>Esc</b> release cursor</div>
+
+    <div id="start">
+      <div class="card panel">
+        <h1>AI Home <em>Inspector</em></h1>
+        <p>Walk through the home and let a local AI flag visible defects. Visual triage only, not a licensed inspection.</p>
+        <div class="row">
+          <button id="enter">Start inspection</button>
+        </div>
+        <small>Click the view to capture the mouse. Everything runs on this laptop.</small>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
