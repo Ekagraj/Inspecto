@@ -148,6 +148,9 @@ web/
   tests/perf.mjs   real-GPU frame rate
 server/app.py      FastAPI: /api/health, /api/detect, /api/client/*
 server/detector.py RF-DETR checkpoint loader + predict
+server/inspections.py  move-in / move-out inspections as files in data/inspections (API: /api/inspections, see TODO.md)
+server/compare.py  lines up a move-out photo with its move-in photo and marks each problem existing / new
+ml/evaluate.py     per-class precision, recall, AP50 on unseen real photos -> results/eval.*
 server/client.py   Ollama chat + scripted fallback
 ml/get_data.py  ml/train.py  ml/make_decals.py  ml/combine.py  ml/retrain.sh  ml/evaluate.py
 models/ data/      gitignored

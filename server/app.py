@@ -2,13 +2,20 @@
 import base64, io, subprocess, tempfile, time
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.responses import FileResponse, JSONResponse
 from PIL import Image
 from pydantic import BaseModel
 
+from . import inspections
 from .detector import Detector, WEIGHTS
 
 app = FastAPI(title="AI Home Inspector")
 _detector = None
+
+
+@app.exception_handler(inspections.Refused)
+def refused(_, error):
+    return JSONResponse({"detail": str(error)}, status_code=400)
 
 
 def detector():
@@ -40,6 +47,50 @@ def detect(body: DetectIn):
         raise HTTPException(413, "image too large")
     t = time.time()
     return {"detections": detector().predict(image), "ms": round((time.time() - t) * 1000)}
+
+
+# --- Condition reports: move-in / move-out inspections (storage and rules in inspections.py) ---
+class InspectionIn(BaseModel):
+    name: str
+    kind: str  # "move-in" | "move-out"
+    baseline: str | None = None  # move-out only: the move-in inspection it is compared with
+
+
+class PhotoIn(BaseModel):
+    room: str
+    image: str  # data URL
+    widthM: float = 1.0
+    pair: str | None = None  # the move-in photo this one retakes
+
+
+@app.get("/api/inspections")
+def inspection_list():
+    return inspections.listing()
+
+
+@app.post("/api/inspections")
+def inspection_create(body: InspectionIn):
+    return inspections.create(body.name, body.kind, body.baseline)
+
+
+@app.get("/api/inspections/{ident}")
+def inspection_get(ident: str):
+    return inspections.load(ident)
+
+
+@app.post("/api/inspections/{ident}/photos")
+def inspection_add_photo(ident: str, body: PhotoIn):
+    return inspections.add_photo(ident, body.room, body.image, detector().predict, body.widthM, body.pair)
+
+
+@app.patch("/api/inspections/{ident}/photos/{photo_id}")
+def inspection_correct(ident: str, photo_id: str, changes: dict):
+    return inspections.correct(ident, photo_id, changes)
+
+
+@app.get("/api/inspections/{ident}/photos/{photo_id}.jpg")
+def inspection_photo(ident: str, photo_id: str):
+    return FileResponse(inspections.photo_path(ident, photo_id), media_type="image/jpeg")
 
 
 @app.post("/api/jpeg")

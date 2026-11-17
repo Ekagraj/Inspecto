@@ -68,20 +68,48 @@ that landlord and tenant can both keep.
 repair price) is exactly deposit-dispute damage; it is needed at every tenancy change rather
 than once; and it does not pretend to replace a licensed home inspection.
 
-**When.** After items 1 to 3 above: it needs honest accuracy numbers, label correction, and
-it builds on the photo-page report. Build in this order, each step usable on its own:
+**Already built (2026-11-16, by Fable): the hard parts, server side. No page uses them yet.**
+- `server/compare.py`: lines up a move-out photo with the move-in photo of the same wall
+  (ORB features + homography) and marks each move-out problem `existing` or `new`, with
+  `sure` and a plain-English `why`. When the wall is too plain to line up it falls back to
+  "similar problem in a similar place" and sets `sure: false`, which the page must show as
+  "please check". Self-check: `uv run python -m server.compare`.
+- `server/inspections.py`: inspections as files in `data/inspections/<id>/` (JSON + JPEGs,
+  git-ignored), dates stamped by the server, a person's corrections saved (`corrected: true`
+  on a re-labelled problem: those photos are future training data). Self-check:
+  `uv run python -m server.inspections`.
+- API (in `server/app.py`, smoke-tested with the real detector):
+  `GET /api/inspections` | `POST /api/inspections {name, kind: "move-in"|"move-out", baseline?}` |
+  `GET /api/inspections/{id}` | `POST /api/inspections/{id}/photos {room, image, widthM?, pair?}` |
+  `PATCH /api/inspections/{id}/photos/{photoId} {widthM?, detections?: {"<index>": {label?, status?, removed?}}}` |
+  `GET /api/inspections/{id}/photos/{photoId}.jpg`. Bad input answers 400 with `detail`.
+  A photo is `{id, room, addedAt, widthM, aspect, pair, aligned, detections: [{label, score,
+  box, status?, sure?, match?, why?, corrected?, removed?}]}`; `match` indexes the paired
+  move-in photo's detections.
+- Checked on the owner's own plain-wall photo: it lined up under a simulated change of
+  viewpoint. NOT checked: a genuine re-take weeks later in different light. Test that with
+  the owner (two photos of one wall, a day apart) before trusting `sure: true`.
 
-1. [ ] **Use it from a phone, at $0.** Serve the photo page to a phone on the home Wi-Fi
-       (Vite `server.host`, the API stays on the laptop) and add camera capture to the file
-       input. Check the layout at phone width. Nothing is hosted and nothing costs money.
-2. [ ] **Inspections with rooms.** A named inspection ("Flat 2B, move-in, 2026-11-16") that
-       holds photos grouped by room, each stamped with the date and time it was added.
-       Browser storage will be too small for many photos: decide where they live (a local
-       folder through the API is the simple answer).
-3. [ ] **Before / after comparison.** Open the move-in inspection, add the move-out photos
-       room by room, and mark each move-out problem as "new" or "was already there" by
-       matching against the move-in findings for that room. Start with the user confirming
-       each match; automatic matching can come later.
+**What is left is the page (steps 1 to 5).** It should follow items 1 to 3 above: it needs
+honest accuracy numbers, and it replaces the browser-storage photo page rather than adding a
+third way to do the same thing (label correction and the report can be built here directly
+on the API instead of on `photo.js`; ask the owner if unsure). Each step usable on its own:
+
+1. [ ] **Use it from a phone, at $0.** Serve the page to a phone on the home Wi-Fi (Vite
+       `server.host: true`; the `/api` proxy keeps working, the API stays on the laptop) and
+       add `capture="environment"` to the file input. Check the layout at phone width.
+       Gotcha: on `http://192.168...` the browser blocks live camera preview and
+       "Use my current location" (both need HTTPS or localhost). A plain file input with
+       `capture` still opens the camera, so use that; location must be typed on the phone.
+2. [ ] **Inspection page** (`web/inspect.html` + `src/inspect.js`, reuse `dom.js`,
+       `report.css`, `photo.css`, the location control and `costOf`). List inspections,
+       create one, pick or type a room, add photos (reuse `decode` / `toJpeg` from
+       `photo.js`: export them), show each photo with boxes, type, size, price, date.
+3. [ ] **Before / after.** In a move-out inspection show the move-in photos room by room,
+       each with "Retake this view" (sends `pair`). Show the two photos side by side, each
+       problem tagged "New" or "Was already there"; when `sure` is false show the `why` and
+       two buttons to confirm (PATCH `status`). Add a type dropdown per problem (PATCH
+       `label`) and "Not damage" (PATCH `removed`). Totals count only new, not removed.
 4. [ ] **The condition report.** Printable / PDF: property, both dates, per room the before
        and after photos side by side, new damage with type, size and repair price, the total,
        the location used for pricing, and the "visual triage, rough estimates" notice.
