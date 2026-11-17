@@ -25,26 +25,28 @@ in `NEXT_STEPS.md`. Last updated 2026-11-16.
 
 The owner's goal is real photos of real walls, so the order follows that.
 
-1. [ ] **Evaluation on real photos** (step 7 in `NEXT_STEPS.md`). Per-type precision and
-       recall on photos the model never saw: `data/test` plus the unused `test` split of each
-       Roboflow set in `data/extra/roboflow/`. The in-home numbers flatter the model.
-2. [ ] **Correct a wrong label on the photo page.** A dropdown per problem to change its type
-       (price updates), and save photo + box + corrected type to a local folder so the
-       owner's photos become training data. Best source for scuffs and holes, which are thin
-       (about 380 photos).
-3. [ ] **Report for the photo page.** Printable, grouped by photo, with the total and the
-       offer calculation the 3D home's report already has. Reuse `report.js` pieces.
-4. [ ] **Location pricing everywhere.** Now: photo page only, three test areas (New York
-       metro, Trenton-Princeton, Scranton-Wilkes-Barre), wages only. Add it to the 3D home
-       and its report, load the full BLS metro table, search by city or ZIP. Never invent
-       multipliers.
+1. [ ] **Evaluation on real photos.** The script is written and trial-run
+       (`uv run ml/evaluate.py`, writes `results/eval.md`, `.csv`, `.png`). STILL TO DO: run
+       it on the new model once training ends, and once on the old one for comparison:
+       `uv run ml/evaluate.py --weights models/detector_before_extra.pth --tag before`.
+       On a 12-photo trial the old model found none of the scuffs or holes.
+2. [x] **Correct a wrong label.** Done on the condition-reports page (`/inspect.html`): a
+       type dropdown per problem, "It is new / It was already there", "Not damage". Saved on
+       the laptop with `corrected: true`. STILL TO DO: a script that turns corrected
+       inspection photos (`data/inspections/*/`) into training data. The quick photo page
+       (`/photo.html`) still has no correction; it links to the reports page instead.
+3. [x] **Printable report for real photos.** Done as the print layout of an inspection
+       (`Print / save PDF`). The quick photo page has no report of its own.
+4. [x] **Location pricing in the 3D home and its report.** Done (`localized` in `costs.js`).
+       STILL TO DO: more than three areas (full BLS metro table needs each area's code,
+       name and position), search by ZIP. Never invent multipliers.
 5. [ ] **Better repair prices.** The cost table (`web/src/costs.json`) is rough hand-built
        estimates, including the two new rows (scuff, hole). Find a source that allows reuse.
-       This is the weakest part for real-world use.
-6. [ ] **README** (step 8): install, run, test, and the credits the CC BY photo licences
-       require (list in `ARCHITECTURE.md`, "Licenses"). Needed before sharing the project.
+       This is the weakest part for real-world use. Not started: no reusable source found.
+6. [x] **README.** Written (`README.md`): what it does, run, test, train, credits. It points
+       to `results/eval.md` for accuracy instead of quoting numbers; fill that in (item 1).
 7. [ ] **Training game mode** (step 6). The largest piece and the least related to real
-       photos. Ask the owner whether to build it or drop it.
+       photos. Ask the owner whether to build it or drop it. Not started.
 
 ## Small known issues
 
@@ -90,30 +92,28 @@ than once; and it does not pretend to replace a licensed home inspection.
   viewpoint. NOT checked: a genuine re-take weeks later in different light. Test that with
   the owner (two photos of one wall, a day apart) before trusting `sure: true`.
 
-**What is left is the page (steps 1 to 5).** It should follow items 1 to 3 above: it needs
-honest accuracy numbers, and it replaces the browser-storage photo page rather than adding a
-third way to do the same thing (label correction and the report can be built here directly
-on the API instead of on `photo.js`; ask the owner if unsure). Each step usable on its own:
+**The page is built too (2026-11-16): `/inspect.html`, `src/inspect.js`, `src/inspect.css`,
+shared helpers in `src/photokit.js`, test `tests/inspect.mjs` (14 checks, passes; it creates
+two "TEST ..." inspections and deletes exactly those). The start screen has a fourth card.**
 
-1. [ ] **Use it from a phone, at $0.** Serve the page to a phone on the home Wi-Fi (Vite
-       `server.host: true`; the `/api` proxy keeps working, the API stays on the laptop) and
-       add `capture="environment"` to the file input. Check the layout at phone width.
-       Gotcha: on `http://192.168...` the browser blocks live camera preview and
-       "Use my current location" (both need HTTPS or localhost). A plain file input with
-       `capture` still opens the camera, so use that; location must be typed on the phone.
-2. [ ] **Inspection page** (`web/inspect.html` + `src/inspect.js`, reuse `dom.js`,
-       `report.css`, `photo.css`, the location control and `costOf`). List inspections,
-       create one, pick or type a room, add photos (reuse `decode` / `toJpeg` from
-       `photo.js`: export them), show each photo with boxes, type, size, price, date.
-3. [ ] **Before / after.** In a move-out inspection show the move-in photos room by room,
-       each with "Retake this view" (sends `pair`). Show the two photos side by side, each
-       problem tagged "New" or "Was already there"; when `sure` is false show the `why` and
-       two buttons to confirm (PATCH `status`). Add a type dropdown per problem (PATCH
-       `label`) and "Not damage" (PATCH `removed`). Totals count only new, not removed.
-4. [ ] **The condition report.** Printable / PDF: property, both dates, per room the before
-       and after photos side by side, new damage with type, size and repair price, the total,
-       the location used for pricing, and the "visual triage, rough estimates" notice.
-5. [ ] **Ask the owner about the rebrand** once they have tried steps 1 to 4 on a real room.
+1. [x] **Phone, at $0.** `npm --prefix web run dev:phone` serves the app to the home Wi-Fi;
+       the file inputs open the phone camera. Layout checked at 390 px wide in the test.
+       NOT tried on a real phone: ask the owner to try it. Known limits: "Use my current
+       location" is blocked there (needs a secure connection), and `capture` means the phone
+       offers the camera only, not the photo library.
+2. [x] **Inspection page.** List, create a move-in, "Start the move-out" from it, rooms,
+       dated photos with boxes, type, size and price.
+3. [x] **Before / after.** Move-in photo beside "Retake this view"; each problem tagged
+       New / Was already there, with "Please check" and the reason when unsure; type
+       dropdown, confirm buttons, "Not damage". Only new, not struck-out damage is charged.
+4. [x] **The condition report.** The page's print layout (`Print / save PDF`): name, both
+       dates, the location used, before and after side by side, totals, notice.
+5. [ ] **Owner tries it on a real room**, then decide the rebrand. Things to watch and
+       report back: does a real retake a day later line up (the "Please check" rate), are the
+       prices believable, is anything missing from the printed report (signatures? address?).
+6. [ ] Not built: deleting an inspection or a photo (the owner is wary of deletes; add it
+       only with a confirm step), renaming, and more than one photo per retake view works but
+       is untested.
 
 **Open points to raise with the owner, not to decide alone.**
 - Unvalidated demand: suggest they ask a few landlords or property managers how they handle
