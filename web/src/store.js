@@ -10,17 +10,20 @@ export function saveFindings(findings) {
   try { localStorage.setItem(KEY, JSON.stringify(findings)); } catch { /* keep going */ }
 }
 
-// One real wall photo waiting to be (or already) hung in the 3D home: {image, widthM, aspect, pos?, normal?}.
+// Real wall photos waiting to be (or already) hung in the 3D home: [{image, widthM, aspect, pos?, normal?}].
 const WALL_KEY = 'inspecto.wallphoto.v1';
 
-export function loadWallPhoto() {
-  try { return JSON.parse(localStorage.getItem(WALL_KEY)); } catch { return null; }
+export function loadWallPhotos() {
+  try {
+    const v = JSON.parse(localStorage.getItem(WALL_KEY));
+    return Array.isArray(v) ? v : v ? [v] : []; // before several photos were allowed, one object was stored
+  } catch { return []; }
 }
 
-/** `null` forgets it. -> false when storage is full or blocked. */
-export function saveWallPhoto(photo) {
+/** -> false when storage is full or blocked. */
+export function saveWallPhotos(photos) {
   try {
-    if (photo) localStorage.setItem(WALL_KEY, JSON.stringify(photo)); else localStorage.removeItem(WALL_KEY);
+    if (photos.length) localStorage.setItem(WALL_KEY, JSON.stringify(photos)); else localStorage.removeItem(WALL_KEY);
     return true;
   } catch { return false; }
 }

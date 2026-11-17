@@ -50,7 +50,12 @@ The owner's goal is real photos of real walls, so the order follows that.
 
 ## Small known issues
 
-- A photo hung in the 3D home is not kept inside the wall sideways (can overhang a corner).
+- Photos in the 3D home (improved 2026-11-16): several can hang at once, they can be added in
+  place ("Add a wall photo" button or drag and drop), resized with `[` and `]`, and are slid
+  back onto their piece of wall. Left: a photo wider than its wall piece is only centred, a
+  photo above a door or beside a window can still overhang the opening, and the 3D view was
+  only tested in software rendering while training ran (not for smoothness on the real GPU:
+  run `node tests/perf.mjs "?fx=auto"` after training).
 - Size on the photo page depends on the width the user types; there is no automatic scale.
 - Thin diagonal defects on ceilings measure too large in the 3D home.
 - ProRAW `.DNG` photos are untested (no sample). HEIC and TIFF are tested.

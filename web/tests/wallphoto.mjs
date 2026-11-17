@@ -49,6 +49,25 @@ await page.waitForFunction(() => window.inspecto, null, { timeout: 120000 });
 check(await page.evaluate(() => window.inspecto.wall.placed), 'the photo is still on the wall after a reload');
 await page.click('#enter');
 
+// A second photo, added right in the 3D home, near a corner: it must stay on its wall.
+await page.evaluate((p) => window.inspecto.wall.add(p), photo);
+check((await page.innerText('#status')).length > 0 && await page.evaluate(() => window.inspecto.wall.waiting === 1), 'a second photo can be added without leaving the 3D home');
+await page.evaluate(() => window.inspecto.teleport(0.75, 0.3, Math.PI / 2, 0)); // facing the west wall, 0.3 m from the corner
+await frames();
+await page.keyboard.press('p');
+const two = await page.evaluate(() => window.inspecto.wall.list());
+check(two.length === 2 && two.every((p) => p.pos), 'both photos hang at once');
+console.log('second photo at', JSON.stringify(two[1].pos.map((v) => +v.toFixed(2))), 'normal', JSON.stringify(two[1].normal));
+check(Math.abs(two[1].normal[0]) === 1 && two[1].pos[2] >= 0.45, 'a photo aimed too close to a corner is slid back onto the wall');
+await page.keyboard.press(']');
+check(await page.evaluate(() => Math.abs(window.inspecto.wall.list()[1].widthM - 1.1) < 0.001 && window.inspecto.wall.list()[0].widthM === 1), '] makes the photo aimed at 10% wider and leaves the other alone');
+await frames();
+await page.screenshot({ path: `${out}/wallphoto-two.png` });
+await page.evaluate(() => document.querySelector('#photo-remove').click());
+check(await page.evaluate(() => window.inspecto.wall.placed === 1), 'Remove takes down only the photo aimed at');
+await page.evaluate(() => window.inspecto.teleport(1.0, 0.75, 0, 0));
+await frames();
+
 await page.evaluate(() => document.querySelector('#photo-remove').click());
 check(await page.evaluate(() => !window.inspecto.wall.has && localStorage.getItem('inspecto.wallphoto.v1') === null), 'Remove takes the photo down and forgets it');
 check(await page.evaluate(() => !window.inspecto.pins.findings.some((f) => f.source === 'photo')), 'its pins go with it');

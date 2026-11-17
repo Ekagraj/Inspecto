@@ -5,7 +5,8 @@ import { createWalk } from './walk.js';
 import { loadDecals, plantDefects, clearDefects, visibleBoxes, randomPose, rng } from './defects.js';
 import { capture, detect } from './detect.js';
 import { createPins } from './pins.js';
-import { createWallPhoto } from './wallphoto.js';
+import { createWallPhotos } from './wallphoto.js';
+import { decode, toJpeg } from './photokit.js';
 import { createMinimap } from './minimap.js';
 import { createFx } from './fx.js';
 import { DEFECTS, SEVERITY_COLOR, nameOf, money, totals, costOf, localized, loadArea } from './costs.js';
@@ -78,7 +79,8 @@ const card = $('#card'), chip = $('#chip'), status = $('#status'), summary = $('
 const minimap = createMinimap($('#minimap'));
 let openId = null, hover = null;
 
-const wall = createWallPhoto(app); // the owner's real photo, if they sent one from the photo page
+// The owner's real photos. Pins measured from a photo go when that photo moves, changes size or is removed.
+const wall = createWallPhotos(app, { onMove: (was) => pins.findings.filter((f) => f.source === 'photo' && was(f.pos)).forEach((f) => pins.remove(f.id)) });
 export const pins = createPins(app, {
   source: (pos) => (wall.contains(pos) ? 'photo' : null),
   onChange(findings) {
@@ -165,18 +167,29 @@ export async function analyze(source) {
 }
 $('#analyze').addEventListener('click', () => analyze());
 
-// --- The owner's wall photo ---
-const dropPhotoPins = () => pins.findings.filter((f) => f.source === 'photo').forEach((f) => pins.remove(f.id));
+// --- The owner's wall photos ---
 function syncPhoto(message) {
   $('#photo-remove').hidden = !wall.placed;
   $('#hint-photo').hidden = !wall.has;
+  $('#hint-size').hidden = !wall.placed;
   if (message) status.textContent = message;
 }
-$('#photo-remove').addEventListener('click', () => {
-  dropPhotoPins();
-  wall.remove();
-  syncPhoto('Photo removed');
-});
+const waitingText = () => `${wall.waiting} photo${wall.waiting === 1 ? '' : 's'} ready · aim at a clear wall and press P`;
+$('#photo-remove').addEventListener('click', () => syncPhoto(wall.remove(camera) ? 'Photo removed' : ''));
+/** Photos can be added right here: dropped on the view or picked with the button. They start 1 m wide. */
+async function addPhotos(files) {
+  let failed = 0;
+  for (const file of files) {
+    try {
+      const bmp = await decode(file);
+      if (!wall.add({ image: toJpeg(bmp, 800, 0.8), widthM: 1, aspect: bmp.width / bmp.height })) failed++;
+    } catch { failed++; }
+  }
+  syncPhoto(wall.waiting ? waitingText() + (failed ? ` · ${failed} could not be read or stored` : '') : 'That file could not be read as a photo');
+}
+$('#photo-add input').addEventListener('change', (e) => { addPhotos([...e.target.files]); e.target.value = ''; });
+addEventListener('dragover', (e) => e.preventDefault());
+addEventListener('drop', (e) => { e.preventDefault(); addPhotos([...e.dataTransfer.files]); });
 syncPhoto();
 
 // --- Input ---
@@ -186,7 +199,7 @@ $('#enter').addEventListener('click', () => {
   document.body.classList.add('live');
   $('#enter').blur(); // or the keys below would go to this button
   walk.lock();
-  if (wall.has && !wall.placed) status.textContent = 'Aim at a clear wall and press P to place your photo';
+  if (wall.waiting) status.textContent = waitingText();
 });
 canvas.addEventListener('click', (e) => {
   if (!live()) return;
@@ -205,8 +218,10 @@ addEventListener('keydown', (e) => {
   else if (e.code === 'Escape' && openId) closeCard();
   else if (e.code === 'KeyP' && wall.has) {
     const ok = wall.place(camera);
-    if (ok) dropPhotoPins(); // pins from the old spot would be left on a bare wall
-    syncPhoto(ok ? 'Photo placed · stand so it fills the view, then press Space' : 'Aim at a clear piece of wall, then press P');
+    syncPhoto(!ok ? 'Aim at a clear piece of wall, then press P' : wall.waiting ? `Photo placed · ${waitingText()}` : 'Photo placed · [ and ] resize it · stand so it fills the view, then press Space');
+  } else if ((e.code === 'BracketLeft' || e.code === 'BracketRight') && wall.placed) {
+    const width = wall.resize(camera, e.code === 'BracketRight' ? 1.1 : 1 / 1.1);
+    if (width) syncPhoto(`Photo is now ${width.toFixed(2)} m wide · press Space to analyze it`);
   }
 });
 

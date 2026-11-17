@@ -4,7 +4,7 @@ import './report.css';
 import './photo.css';
 import { h, safeImg } from './dom.js';
 import { detect } from './detect.js';
-import { saveWallPhoto } from './store.js';
+import { loadWallPhotos, saveWallPhotos } from './store.js';
 import { DEFECTS, COST_NOTE, SEVERITY_COLOR, nameOf, money, totals, loadArea, saveArea } from './costs.js';
 import { VERDICT, range, decode, toJpeg, priceOf, areaPanel } from './photokit.js';
 
@@ -160,7 +160,7 @@ function card(p) {
         h('label', { for: `w${p.n}`, class: 'label', text: 'Width of the area in this photo' }),
         width, h('span', { class: 'label', text: 'metres' }),
         h('button', { class: 'ghost', text: 'Place on a wall in the 3D home', onclick: () => {
-          if (saveWallPhoto({ image: p.thumb, widthM: p.widthM, aspect: p.aspect })) { location.href = '/'; return; }
+          if (saveWallPhotos([...loadWallPhotos(), { image: p.thumb, widthM: p.widthM, aspect: p.aspect }])) { location.href = '/'; return; }
           status = { text: 'Browser storage is full, so the photo could not be sent to the 3D home. Remove some photos first.', error: true };
           render();
         } }),
