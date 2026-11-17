@@ -6,12 +6,20 @@ in `NEXT_STEPS.md`. Last updated 2026-11-16.
 
 ## Right now
 
-- [ ] **Owner starts the training** (laptop plugged in, lid open, about 3 to 3.5 hours):
+- [ ] **Continue the paused training.** It was started 2026-11-16 23:01 and paused by the
+      owner at 23:40 with 1 of 6 rounds done (about 32 minutes a round). That round is kept
+      in `models/resume.pth` (checked: it loads and detects). The app still runs the OLD
+      5-type model, `models/detector.pth`. To continue, laptop plugged in and lid open:
       `nohup caffeinate -is sh ml/train_more.sh > train_more.log 2>&1 &`
-- [ ] **After `train_more.log` says "train_more: done"**: restart the API, then run
-      `tests/detect-eval.mjs 3 20`, `tests/photo.mjs`, `tests/wallphoto.mjs` and
-      `tests/smoke.mjs`. Record the numbers in `NEXT_STEPS.md`. Before: precision 88%,
-      recall 85% in the 3D home, 5 types.
+      The script sees `models/resume.pth` and trains 5 more rounds from it, about 2.5 to
+      3 hours. Training needs no Claude session and no terminal left open: once started it
+      runs on its own. Do not start it twice.
+- [ ] **After `train_more.log` says "train_more: done"**: restart the API, then
+      `uv run ml/evaluate.py` and
+      `uv run ml/evaluate.py --weights models/detector_before_extra.pth --tag before`, then
+      `tests/detect-eval.mjs 3 20`, `tests/photo.mjs`, `tests/inspect.mjs`,
+      `tests/wallphoto.mjs` and `tests/smoke.mjs`. Record the numbers in `NEXT_STEPS.md`.
+      Before: precision 88%, recall 85% in the 3D home, 5 types.
 - [ ] **Re-test the owner's own photo**: a scrape with chipped paint on a wall, which the old
       model called "water stain" at 52%. Ask the owner to add it on the photo page. The right
       answer is "Scuff / scrape" or "Peeling paint".
