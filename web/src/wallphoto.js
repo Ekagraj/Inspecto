@@ -57,6 +57,7 @@ export function createWallPhotos({ scene, house }, { onMove = () => {} } = {}) {
     pos.y = clamp(point.y, h / 2, H - h / 2);
     p.pos = pos.toArray();
     p.normal = n.toArray();
+    p.span = [piece.min[along], piece.max[along]]; // the wall piece's ends, so resizing keeps it on the wall
   }
   const inside = (p, point, margin = 0) => {
     if (!p.pos) return false;
@@ -105,7 +106,9 @@ export function createWallPhotos({ scene, house }, { onMove = () => {} } = {}) {
       if (!p) return null;
       leaving(p);
       p.widthM = Math.round(clamp(p.widthM * factor, 0.2, 6) * 100) / 100;
-      seat(p, { point: new THREE.Vector3(...p.pos), n: new THREE.Vector3(...p.normal), piece: new THREE.Box3(new THREE.Vector3(-1e9, 0, -1e9), new THREE.Vector3(1e9, H, 1e9)) });
+      const piece = new THREE.Box3(new THREE.Vector3(-1e9, 0, -1e9), new THREE.Vector3(1e9, H, 1e9)), along = Math.abs(p.normal[0]) > 0.5 ? 'z' : 'x';
+      if (p.span) [piece.min[along], piece.max[along]] = p.span;
+      seat(p, { point: new THREE.Vector3(...p.pos), n: new THREE.Vector3(...p.normal), piece });
       hang(p);
       commit();
       return p.widthM;

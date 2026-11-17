@@ -82,7 +82,10 @@ def compare(before_image, before_dets, after_image, after_dets):
             box = _map_box(m, d["box"])
             score, i = max(((_shared(box, b["box"]), i) for i, b in enumerate(before_dets)), default=(0.0, None))
             in_view = _area([max(box[0], 0), max(box[1], 0), min(box[2], 1), min(box[3], 1)]) / max(1e-9, _area(box))
-            if score >= 0.5:
+            if score >= 0.5 and _area(box) >= 3 * _area(before_dets[i]["box"]):
+                # A big new stain around an old nail hole must not pass as "already there".
+                results.append({"status": "new", "sure": False, "match": i, "why": "A problem was already here at move-in, but it is now much larger. Check whether it has grown or something new has happened."})
+            elif score >= 0.5:
                 results.append({"status": "existing", "sure": True, "match": i, "why": "Same spot as a problem in the move-in photo."})
             elif in_view < 0.5:
                 results.append({"status": "new", "sure": False, "match": None, "why": "This part of the wall is outside the move-in photo, so it cannot be compared."})
@@ -123,6 +126,9 @@ def _selfcheck():
     assert (r["results"][0]["status"], r["results"][0]["sure"], r["results"][0]["match"]) == ("existing", True, 0), r["results"][0]
     assert (r["results"][1]["status"], r["results"][1]["sure"]) == ("new", True), r["results"][1]
     assert compare(before, [], after, [same])["results"][0]["status"] == "new", "no move-in problem there means new"
+    tiny = {"label": "hole", "score": 0.9, "box": [0.41, 0.43, 0.45, 0.47]}
+    grown = compare(before, [tiny], after, [same])["results"][0]
+    assert (grown["status"], grown["sure"], grown["match"]) == ("new", False, 0), "a much larger problem over a small old one is new, and a person must look"
 
     plain = Image.new("RGB", (800, 600), (236, 232, 222))
     r = compare(plain, [old], plain, [{**old, "box": [0.33, 0.28, 0.60, 0.62]}, new])

@@ -18,7 +18,7 @@ export function severityOf(label, w, h) {
 /** `factor` scales the US-average table to a local labour market (see AREAS). */
 export function costOf(label, severity, factor = 1) {
   const [low, high] = DEFECTS[label]?.[severity] ?? [0, 0];
-  return { low: Math.round((low * factor) / 10) * 10, high: Math.round((high * factor) / 10) * 10 };
+  return { low: Math.round((low * factor) / 5) * 5, high: Math.round((high * factor) / 5) * 5 }; // to $5: the table has $75 rows
 }
 
 // Location pricing: three test areas plus the US average. factor = local painter wage / US wage.
