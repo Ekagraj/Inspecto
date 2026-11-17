@@ -113,6 +113,11 @@ await page.setInputFiles('.drop input', files[0]);
 await page.waitForFunction(() => document.querySelector('.status.error')?.textContent.includes('detector'));
 check((await page.locator('.photo').count()) === 3, 'detector offline: clear message, nothing added');
 
+// "Place on a wall" hands the photo to the 3D home and goes there.
+await page.locator('.controls button', { hasText: 'Place on a wall' }).first().click();
+await page.waitForURL('http://localhost:5173/', { timeout: 20000 }).catch(() => {});
+check(page.url() === 'http://localhost:5173/' && (await page.evaluate(() => !!localStorage.getItem('inspecto.wallphoto.v1'))), '"Place on a wall" saves the photo and opens the 3D home');
+
 await browser.close();
 if (errors.length) { console.error('ERRORS:\n' + errors.join('\n')); process.exit(1); }
 console.log('photo test passed');
