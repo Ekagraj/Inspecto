@@ -3,7 +3,9 @@ import './style.css';
 import './report.css';
 import { h, safeImg } from './dom.js';
 import { loadFindings, saveFindings } from './store.js';
-import { DEFECTS, COST_NOTE, SEVERITY_COLOR, nameOf, money, totals } from './costs.js';
+import './photo.css'; // the location panel's styles
+import { DEFECTS, COST_NOTE, SEVERITY_COLOR, nameOf, money, totals, localized, loadArea, saveArea } from './costs.js';
+import { areaPanel } from './photokit.js';
 
 const ROOM_ORDER = ['living', 'kitchen', 'hall', 'bedroom', 'bath'];
 const ASKING_KEY = 'inspecto.asking.v1';
@@ -150,10 +152,18 @@ function footer() {
   return h('div', { class: 'foot' }, DISCLAIMER.cloneNode(true), btn);
 }
 
-const findings = loadFindings();
+const findings = localized(loadFindings()); // stored costs are US-average; price them for the chosen place
 const root = document.querySelector('#root');
+// Choosing a place re-prices everything, so the page is simply loaded again.
+const place = h('div');
+const drawPlace = (note = '') => place.replaceChildren(areaPanel(loadArea(), note, (next, n = '') => {
+  if (!next) { drawPlace(n); return; }
+  saveArea(next);
+  location.reload();
+}));
+drawPlace();
 root.append(h('main', { class: 'wrap' },
   header(),
   DISCLAIMER,
-  ...(findings.length ? [hero(findings), offerPanel(findings), ...rooms(findings)] : [empty()]),
+  ...(findings.length ? [place, hero(findings), offerPanel(findings), ...rooms(findings)] : [empty()]),
   footer()));

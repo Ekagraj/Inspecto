@@ -34,6 +34,8 @@ export function loadArea() {
 export function saveArea(area) {
   try { localStorage.setItem(AREA_KEY, area.id); } catch { /* storage blocked: fine */ }
 }
+/** Findings are stored with US-average costs; this prices them for the chosen location. */
+export const localized = (findings, area = loadArea()) => findings.map((f) => ({ ...f, cost: costOf(f.label, f.severity, area.factor) }));
 /** Typed text -> area, by name or by a known place inside it. */
 export function findArea(text) {
   const q = text.trim().toLowerCase();

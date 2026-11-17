@@ -18,9 +18,9 @@ const mk = (n, label, room, roomName, severity, cost, extra = {}) => ({
 });
 const seed = [
   mk(1, 'crack', 'living', 'Living room', 'minor', { low: 100, high: 350 }),
-  mk(2, 'water_seepage', 'bath', 'Bathroom', 'major', { low: 1000, high: 3000 }),
-  mk(3, 'peeling_paint', 'kitchen', 'Kitchen', 'moderate', { low: 200, high: 600 }),
-  mk(4, 'crack', 'living', 'Living room', 'major', { low: 500, high: 1500 }, { label: '<img src=x onerror=window.pwned=1>' }),
+  mk(2, 'water_seepage', 'bath', 'Bathroom', 'major', { low: 2500, high: 8000 }),
+  mk(3, 'peeling_paint', 'kitchen', 'Kitchen', 'moderate', { low: 300, high: 900 }),
+  mk(4, 'crack', 'living', 'Living room', 'major', { low: 0, high: 0 }, { label: '<img src=x onerror=window.pwned=1>' }), // an unknown type costs nothing
 ];
 
 await page.goto('http://localhost:5173/report.html');
@@ -31,7 +31,7 @@ await page.waitForSelector('.hero');
 const check = (ok, msg) => { if (!ok) errors.push(msg); console.log(ok ? 'ok  ' : 'FAIL', msg); };
 const text = (sel) => page.locator(sel).first().innerText();
 
-const low = 100 + 1000 + 200 + 500, high = 350 + 3000 + 600 + 1500;
+const low = 100 + 2500 + 300, high = 350 + 8000 + 900; // the cost table's own values: the page prices from type and severity
 const mid = Math.round((low + high) / 2 / 50) * 50;
 check((await text('.hero h1')).replace(/[$,]/g, '') === String(mid), `headline midpoint $${mid}`);
 check((await text('.hero .range')).includes(`$${low.toLocaleString('en-US')}`), 'range shows low total');
@@ -50,6 +50,20 @@ check(offer === String(450000 - mid), `suggested offer ${450000 - mid}`);
 await page.reload();
 await page.waitForSelector('.hero');
 check((await page.inputValue('#asking')) === '450,000', 'asking price remembered');
+
+// Location re-prices the whole report.
+const headline = async () => Number((await text('.hero h1')).replace(/[$,]/g, ''));
+await page.fill('#area', 'Scranton');
+await page.locator('#area').blur();
+await page.waitForFunction(() => document.querySelector('.loc-now b')?.textContent.includes('Scranton'));
+check((await headline()) < mid, `a cheaper area lowers the estimate ($${await headline()} < $${mid})`);
+await page.fill('#area', 'New York City metro (NY-NJ)');
+await page.locator('#area').blur();
+await page.waitForFunction(() => document.querySelector('.loc-now b')?.textContent.includes('New York'));
+check((await headline()) > mid, `New York raises it ($${await headline()} > $${mid})`);
+await page.fill('#area', 'US average');
+await page.locator('#area').blur();
+await page.waitForFunction(() => document.querySelector('.loc-now b')?.textContent.includes('US average'));
 await page.screenshot({ path: `${out}/report.png`, fullPage: true });
 await page.emulateMedia({ media: 'print' });
 await page.screenshot({ path: `${out}/report-print.png`, fullPage: true });

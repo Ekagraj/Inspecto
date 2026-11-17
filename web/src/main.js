@@ -8,7 +8,7 @@ import { createPins } from './pins.js';
 import { createWallPhoto } from './wallphoto.js';
 import { createMinimap } from './minimap.js';
 import { createFx } from './fx.js';
-import { DEFECTS, SEVERITY_COLOR, nameOf, money, totals } from './costs.js';
+import { DEFECTS, SEVERITY_COLOR, nameOf, money, totals, costOf, localized, loadArea } from './costs.js';
 import './style.css';
 
 const $ = (s) => document.querySelector(s);
@@ -82,7 +82,7 @@ const wall = createWallPhoto(app); // the owner's real photo, if they sent one f
 export const pins = createPins(app, {
   source: (pos) => (wall.contains(pos) ? 'photo' : null),
   onChange(findings) {
-    const t = totals(findings);
+    const t = totals(localized(findings)); // priced for the place chosen on the report or photo page
     if ($('#sum-n').textContent !== String(findings.length)) { // restart the count animation
       summary.classList.remove('bump');
       void summary.offsetWidth;
@@ -107,7 +107,8 @@ function openCard(f) {
   $('#card-where').textContent = `${f.roomName}, ${f.surface} (${f.material})${f.source === 'photo' ? ' · from your photo' : ''}`;
   $('#card-size').textContent = `${f.sizeM[0].toFixed(2)} × ${f.sizeM[1].toFixed(2)} m (${f.areaM2.toFixed(2)} m²)`;
   $('#card-score').textContent = `${Math.round(f.score * 100)}%`;
-  $('#card-cost').textContent = `${money(f.cost.low)} – ${money(f.cost.high)} (estimate)`;
+  const area = loadArea(), cost = costOf(f.label, f.severity, area.factor);
+  $('#card-cost').textContent = `${money(cost.low)} – ${money(cost.high)} (estimate${area.id === 'us' ? '' : `, ${area.name}`})`;
   $('#card-cause').textContent = d?.cause ?? '';
   $('#card-action').textContent = d?.action ?? '';
   card.hidden = false;

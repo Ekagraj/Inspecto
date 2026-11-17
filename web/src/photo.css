@@ -37,3 +37,8 @@
 @media (max-width: 760px) {
   .photo { grid-template-columns: 1fr; }
 }
+@media print { /* on paper: the chosen place, not the controls for choosing it */
+  .loc-row, .loc-src, .loc-note { display: none !important; }
+  .loc { background: #fff !important; border-color: #bbb; }
+  .loc-now b { color: #111; }
+}
