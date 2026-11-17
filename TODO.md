@@ -55,16 +55,43 @@ The owner's goal is real photos of real walls, so the order follows that.
 - Frame rate was not re-measured after the realism pass (`node tests/perf.mjs "?fx=auto"`).
 - "Damaged tile" is inferred from a crack on a tiled surface, not detected.
 
-## Product direction (an idea, not agreed: discuss with the owner before building)
+## New feature (agreed by the owner 2026-11-16): move-in / move-out condition reports
 
-The owner asked which missing feature would make this a real business. Suggestion given:
-**move-in / move-out condition reports for rentals.** Photograph each room when a tenant
-moves in and again when they move out; the app finds the new damage, prices it, and produces
-a dated before / after report both sides can keep. Why this one: what the model is good at
-(scuffs, holes, stains, peeling paint, with a repair price) is exactly deposit-dispute
-damage, it is needed at every tenancy change rather than once, and it does not pretend to
-replace a licensed home inspection. What it would need beyond today's app: use from a phone
-(camera capture), a "before" set to compare against, a dated shareable PDF, and honest
-accuracy numbers (item 1 above). Unvalidated: the owner should ask a few landlords or
-property managers first. A $0 first step: make the photo page usable from a phone on the
-home Wi-Fi and add the before / after comparison locally.
+The owner wants this built and may rebrand the whole app around it if it works. Do not
+rename or rebrand anything yet: build it, let the owner try it, then ask.
+
+**What it is.** Photograph each room when a tenant moves in and again when they move out.
+The app finds the new damage, prices the repair, and produces a dated before / after report
+that landlord and tenant can both keep.
+
+**Why this one.** What the model is good at (scuffs, holes, stains, peeling paint, with a
+repair price) is exactly deposit-dispute damage; it is needed at every tenancy change rather
+than once; and it does not pretend to replace a licensed home inspection.
+
+**When.** After items 1 to 3 above: it needs honest accuracy numbers, label correction, and
+it builds on the photo-page report. Build in this order, each step usable on its own:
+
+1. [ ] **Use it from a phone, at $0.** Serve the photo page to a phone on the home Wi-Fi
+       (Vite `server.host`, the API stays on the laptop) and add camera capture to the file
+       input. Check the layout at phone width. Nothing is hosted and nothing costs money.
+2. [ ] **Inspections with rooms.** A named inspection ("Flat 2B, move-in, 2026-11-16") that
+       holds photos grouped by room, each stamped with the date and time it was added.
+       Browser storage will be too small for many photos: decide where they live (a local
+       folder through the API is the simple answer).
+3. [ ] **Before / after comparison.** Open the move-in inspection, add the move-out photos
+       room by room, and mark each move-out problem as "new" or "was already there" by
+       matching against the move-in findings for that room. Start with the user confirming
+       each match; automatic matching can come later.
+4. [ ] **The condition report.** Printable / PDF: property, both dates, per room the before
+       and after photos side by side, new damage with type, size and repair price, the total,
+       the location used for pricing, and the "visual triage, rough estimates" notice.
+5. [ ] **Ask the owner about the rebrand** once they have tried steps 1 to 4 on a real room.
+
+**Open points to raise with the owner, not to decide alone.**
+- Unvalidated demand: suggest they ask a few landlords or property managers how they handle
+  move-out damage now and whether they would pay for this.
+- A real product needs hosting and accounts, which breaks the stay-free rule. Steps 1 to 4
+  avoid that on purpose; anything beyond them needs the owner's say-so.
+- Repair prices are still rough estimates (item 5 above). A report used in a deposit dispute
+  makes that weakness matter more.
+- The 3D home becomes a demo rather than the product. Keep it unless the owner says otherwise.
