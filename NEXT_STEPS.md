@@ -1,6 +1,7 @@
 # Next steps
 
 Read ARCHITECTURE.md first. Follow its decisions unless something is broken.
+**The ordered to-do list is in `TODO.md`: start there.** This file holds the details.
 
 Owner's rules: stay free ($0); ask before any account, payment or download over 2 GB;
 permissive licenses only (MIT / Apache 2.0 / BSD); be token-efficient; commit and update
