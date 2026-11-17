@@ -1,0 +1,49 @@
+/* Condition reports page. Builds on report.css and photo.css. */
+.title { padding: 34px 0 4px; }
+.title h1 { margin: 6px 0; font: 400 clamp(40px, 6vw, 76px)/1 var(--serif); letter-spacing: -0.02em; }
+.title p { margin: 0; font: 500 12px/1.5 var(--mono); color: var(--muted); }
+
+.new-form { display: grid; gap: 10px; margin: 26px 0 0; padding: 16px 18px; }
+.new-form input[type="text"] { flex: 1 1 260px; min-width: 0; padding: 10px 12px; font: 500 14px var(--mono); color: var(--paper); background: rgba(0, 0, 0, 0.25); border: 1px solid var(--line); }
+.new-form input[type="text"]:focus { border-color: var(--amber); outline: 0; }
+
+.insp { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 18px; }
+.insp h3 { margin: 0; font: 400 26px/1 var(--serif); }
+.insp .sub { font: 500 11px var(--mono); color: var(--muted); }
+.insp .go { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+.insp button { padding: 9px 14px; }
+
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; margin-bottom: 14px; }
+.pair .photo, .stack .photo { grid-template-columns: 1fr; }
+.stack { display: grid; gap: 14px; }
+.room .photos { margin: 0 0 14px; }
+.room .photos:empty { display: none; }
+
+.file { display: block; padding: 22px 18px; text-align: center; cursor: pointer; border: 1px dashed var(--line); transition: border-color 0.2s, background 0.2s; }
+.file:hover, .file:focus-within { border-color: var(--amber); background: rgba(255, 178, 36, 0.08); }
+.file.busy { cursor: progress; opacity: 0.6; }
+.file strong { display: block; font: 400 24px/1.1 var(--serif); }
+.file span { display: block; margin: 6px auto 0; max-width: 48ch; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.file input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+
+.det select { max-width: 100%; padding: 0 2px 2px; font: 400 21px/1.1 var(--serif); color: var(--paper); background: transparent; border: 0; border-bottom: 1px dashed var(--muted); cursor: pointer; }
+.det select option { color: #111; }
+.det.removed { opacity: 0.5; }
+.det.removed .head { text-decoration: line-through; }
+.sev.state.new { background: var(--red); }
+.sev.state.existing { background: var(--muted); }
+.choice { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.choice button { padding: 6px 10px; font-size: 10px; color: var(--paper); background: transparent; border: 1px solid var(--line); }
+.choice button:hover { border-color: var(--paper); background: transparent; }
+.choice button[aria-pressed="true"] { color: var(--ink); background: var(--paper); border-color: var(--paper); }
+
+@media (max-width: 760px) {
+  .pair { grid-template-columns: 1fr; }
+}
+@media print {
+  .new-form, .file, .choice, .controls, .loc-row, .loc-src, .loc-note, .status { display: none !important; }
+  .title h1, .title p, .insp h3, .loc-now b, .det select { color: #111; }
+  .det select { border: 0; appearance: none; }
+  .loc, .insp { background: #fff !important; border-color: #bbb; }
+  .pair, .photo { break-inside: avoid; }
+}
