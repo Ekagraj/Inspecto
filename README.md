@@ -24,6 +24,7 @@ Trenton-Princeton NJ, Scranton-Wilkes-Barre PA). iPhone photos work, including H
 Needs macOS on Apple silicon, [uv](https://docs.astral.sh/uv/) and Node 20 or newer.
 
     uv sync                                          # Python side, once
+    brew install tesseract                           # reads lengths on floor plans, once
     npm --prefix web install                         # web side, once
     uv run uvicorn server.app:app --port 8000        # the detector (first terminal)
     npm --prefix web run dev                         # the app (second terminal)

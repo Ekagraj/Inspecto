@@ -36,17 +36,37 @@ def health():
     return {"detector": WEIGHTS.exists()}
 
 
-@app.post("/api/detect")
-def detect(body: DetectIn):
+def decode_image(data_url):
+    """Data URL -> PIL image, refusing what is not an image or is too large to process."""
     try:
-        image = Image.open(io.BytesIO(base64.b64decode(body.image.split(",", 1)[-1])))
+        image = Image.open(io.BytesIO(base64.b64decode(data_url.split(",", 1)[-1])))
         image.load()
     except Exception:
         raise HTTPException(400, "image must be a base64 data URL")
     if image.width * image.height > 4096 * 4096:
         raise HTTPException(413, "image too large")
+    return image
+
+
+@app.post("/api/detect")
+def detect(body: DetectIn):
+    image = decode_image(body.image)
     t = time.time()
     return {"detections": detector().predict(image), "ms": round((time.time() - t) * 1000)}
+
+
+@app.post("/api/floorplan")
+def read_floorplan(body: DetectIn):
+    """A floor plan picture -> the home's shell in metres (walls, doors, windows, stairs, room names)."""
+    import numpy as np
+    from . import floorplan
+    gray = np.array(decode_image(body.image).convert("L"))
+    try:
+        return floorplan.read_plan(gray)
+    except ValueError as e:  # no readable lengths: not a plan, or a style this reader does not know
+        raise HTTPException(400, str(e))
+    except RuntimeError as e:  # Tesseract missing
+        raise HTTPException(503, str(e))
 
 
 # --- Condition reports: move-in / move-out inspections (storage and rules in inspections.py) ---

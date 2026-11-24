@@ -135,6 +135,7 @@ web/
   src/photo.js     real-photo check: upload, detect, merge duplicate boxes, verdict, running total
   src/dom.js       h() DOM helper shared by report and photo pages
   src/wallphoto.js the owner's real photo hung on a wall (P key); findings in it get source 'photo'
+  home.html  src/home.js  your home from its floor plan: overlay of what was read + 3D shell (overview, walk)
   src/game.js      timer, flagging, client chat, scoring
   public/decals/   *.png + decals.json
   public/textures/ public/models/   CC0 Poly Haven assets
@@ -146,11 +147,15 @@ web/
   tests/bake.mjs   runs the light bake, writes public/bake/
   tests/look.mjs   real-GPU screenshots of fixed views
   tests/perf.mjs   real-GPU frame rate
+  tests/home.mjs   plan -> shell -> 3D on real plans you pass in (listing plans are not in git)
 server/app.py      FastAPI: /api/health, /api/detect, /api/client/*
 server/detector.py RF-DETR checkpoint loader + predict
 server/inspections.py  move-in / move-out inspections as files in data/inspections (API: /api/inspections, see TODO.md)
 server/compare.py  lines up a move-out photo with its move-in photo and marks each problem existing / new
+server/floorplan.py  floor plan picture -> walls (boxes), doors, windows, stairs, room names in metres (POST /api/floorplan).
+                  No AI: OpenCV for the drawing; Tesseract reads the written lengths, which set the scale.
 ml/evaluate.py     per-class precision, recall, AP50 on unseen real photos -> results/eval.*
+ml/make_plans.py  ml/eval_plans.py  random listing-style plans with true answers, and the reader's grade on them
 server/client.py   Ollama chat + scripted fallback
 ml/get_data.py  ml/train.py  ml/make_decals.py  ml/combine.py  ml/retrain.sh  ml/evaluate.py
 models/ data/      gitignored
@@ -235,5 +240,6 @@ Report precision, recall, F1 and support per class, plus AP50. Save
 | Ollama (MIT), Llama 3.2 3B weights | Llama 3.2 Community License (weights, not code) |
 | Defect images | CC BY 4.0 (Roboflow Universe `detr_crack_dataset`) |
 | Extra defect images (step 5d) | CC BY 4.0, Roboflow Universe: `dommages/batch1-yprx8`, `dommages/batch2-eunzt`, `scipublic/wall-6bnve`, `peumalab/wall-defects`, `assuralabs/av-water-damage`, `elaas-workspace/wall-defect-7fdkt-jpjpa`, `jq3/building_defect`, `building-fault-detection-and-diagnostics/paint-damage-det` |
+| Tesseract OCR (Homebrew, used by server/floorplan.py) | Apache 2.0 |
 | Local price factors | Public domain (US Bureau of Labor Statistics, OEWS May 2025) |
 | Textures, furniture and sky HDRI (`ballawley_park`) | CC0 (Poly Haven) |

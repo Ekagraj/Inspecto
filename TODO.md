@@ -56,6 +56,46 @@ The owner's goal is real photos of real walls, so the order follows that.
 7. [ ] **Training game mode** (step 6). The largest piece and the least related to real
        photos. Ask the owner whether to build it or drop it. Not started.
 
+## Your home from its floor plan and photos (agreed with the owner 2026-11-17)
+
+The 3D home must be the owner's real home, built by the app, not the fixed apartment in
+`house.js`. Hanging a photo on a wall (`wallphoto.js`) was a misunderstanding of what they wanted.
+The owner will not trace or draw: at most they name photos and confirm. Design: the floor plan
+gives the shape (it has the lengths); photos give the look. Real photos are listing-style wide
+shots from a corner or doorway (2 to 3 walls, ceiling and floor in each, 1 to 4 per room), not one
+per wall. Floors and ceilings get default materials. Room by room, the user checks each result.
+Test material: a Zillow listing (two plans, 19 photos) in `floor/`, git-ignored: never commit it.
+Free tools only, each under 500 MB; heavy work on the server so the page stays fast.
+
+1. [x] **Plan -> walkable 3D shell** (2026-11-17). `server/floorplan.py`, `POST /api/floorplan`,
+       `/home.html` (`src/home.js`), `tests/home.mjs`. On both listing plans: scale from 5/5 and
+       7/8 written lengths, every real door and window found, stairs found. Known issues:
+       a few false openings (open floor between a counter and a wall, a counter edge);
+       room names only partly read (5 of 9); which end of the stairs is up is not read and stairs
+       are not climbable; glass sliding doors count as windows (not walkable); the two floors are
+       separate; nothing is saved yet; 8 ft ceilings assumed.
+1b. [~] **Make plan reading perfect for this one style first** (owner's call, 2026-11-17), before
+       other styles. No free source of real listing plans in bulk (listing sites forbid scraping,
+       Wikimedia has none), so `ml/make_plans.py` draws random plans in the magicplan / Sensopia
+       style with their true answer, and `ml/eval_plans.py` grades the reader:
+       `uv run ml/make_plans.py --n 100 --out data/plans_synth100 --seed 2`
+       `uv run ml/eval_plans.py data/plans_synth100` (about 2 minutes).
+       Now: 89/100 plans perfect; scale within 1% on 96; 719/745 doors and windows (97%),
+       none of the wrong kind; stairs 59/66. Left: (a) two plans where two of the three OCR
+       readings make the same misread (25' read as 29' or 20') -- cross-check with room sizes;
+       (b) two plans where tiny JPEG lengths cannot be read; (c) 7 stairs missed, 8 invented;
+       (d) 15 invented doors. Always also run the two real plans (`floor/`, scale 0.01095).
+       Other styles fail for now: metric lengths, walls drawn as two outlines, plans with only
+       areas (`floor/download.*`).
+2. [ ] **One simple room from its photos**: the front bedroom of the listing. For each photo find
+       where the camera stood (vanishing points of the room's right angles, fit the plan's room box
+       to the photo's lines; OpenCV, no AI), then paint each wall from the photo that sees it best.
+3. [ ] **Check screen fixes**: tap an opening to make it door / window / glass door / not there;
+       flip the stairs; save the home (`data/homes/<id>/`, same pattern as inspections).
+4. [ ] Hard cases: the open kitchen (cabinets cover walls), stairs joining the two floors.
+5. [ ] Later, only if the owner asks: cloud storage for photos (free tiers exist, but it breaks
+       the stay-free, no-hosting rule).
+
 ## Small known issues
 
 - Photos in the 3D home (improved 2026-11-16): several can hang at once, they can be added in

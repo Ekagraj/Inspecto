@@ -9,3 +9,9 @@ models/
 test-results/
 *.log
 .roboflow_key
+
+# Zillow listing photos used for testing only: copyrighted, never commit
+floor/
+
+# Local eval outputs, regenerate with ml/eval_plans.py
+results/

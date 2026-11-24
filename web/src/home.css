@@ -1,0 +1,14 @@
+.home-title { margin: 14px 0 6px; font: 400 44px/1 var(--serif); }
+.home-lead { margin: 0 0 18px; color: var(--muted); max-width: 60ch; }
+.home-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 12px 0; }
+.home-status { margin: 0; color: var(--muted); }
+.home-warn { color: #ff7a2f; }
+.home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+.home-grid section { min-width: 0; }
+.plan-canvas, .home-3d { display: block; width: 100%; margin-top: 8px; border: 1px solid var(--line); }
+.plan-canvas { height: auto; background: #fff; }
+.home-3d { aspect-ratio: 4 / 3; height: auto; touch-action: none; }
+.home-summary p { margin: 10px 0; }
+.home-legend { list-style: none; padding: 0; margin: 10px 0; display: grid; gap: 6px; }
+.home-legend i { display: inline-block; width: 12px; height: 12px; margin-right: 8px; vertical-align: -1px; }
+@media (max-width: 760px) { .home-grid { grid-template-columns: 1fr; } }
