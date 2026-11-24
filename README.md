@@ -7,6 +7,11 @@ is uploaded and nothing costs money.
 **It is visual triage, not a licensed inspection.** It can miss damage and name it wrongly,
 it cannot see behind walls, and its repair prices are rough estimates, not quotes.
 
+**Live demo:** https://inspecto-tau.vercel.app (the 3D walkthrough only). The Python server is
+not connected there yet, so photo analysis, floor plans and saved inspections need a local run
+(below). It can be connected easily: host the server anywhere that runs Docker and forward
+`/api` to it from Vercel.
+
 ## What you can do with it
 
 | Page | Address | What it is for |
