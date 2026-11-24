@@ -4,7 +4,7 @@
 
 Needs a free Roboflow API key in .roboflow_key (git-ignored). Downloads only: it uses no
 Roboflow credits and trains nothing. Safe to re-run: finished datasets are skipped.
-Stops before the total would pass 2 GB (the owner's ask-first limit).
+Stops before the total would pass 2 GB (a disk-space safety limit).
 """
 import json, pathlib, sys, time, urllib.request, zipfile
 
@@ -50,7 +50,7 @@ for slug, why in DATASETS.items():
     req = urllib.request.urlopen(link, timeout=120)
     size = int(req.headers.get("Content-Length") or 0)
     if total + size > LIMIT:
-        sys.exit(f"STOP: {slug} is {size / 1e6:.0f} MB and would take the total past 2 GB. Ask the owner.")
+        sys.exit(f"STOP: {slug} is {size / 1e6:.0f} MB and would take the total past 2 GB. Raise the limit to continue.")
     OUT.mkdir(parents=True, exist_ok=True)
     with open(zpath, "wb") as f:
         while chunk := req.read(1 << 20):

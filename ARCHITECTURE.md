@@ -69,7 +69,7 @@ session does have these tools, use them instead.
 10. **Python env: one `uv` project at the repo root** (`pyproject.toml`,
     Python 3.12). Weights and data are gitignored (`models/`, `data/`).
 
-## Look and feel (added in step 4, at the owner's request for a striking UI)
+## Look and feel
 
 - **Design system** in `web/src/style.css`: ink glass panels (`.panel`) with amber crop-mark
   corners (`.ticks`), Instrument Serif for headlines and big numbers, Geist Mono micro-labels
@@ -134,7 +134,7 @@ web/
   src/report.js    report page
   src/photo.js     real-photo check: upload, detect, merge duplicate boxes, verdict, running total
   src/dom.js       h() DOM helper shared by report and photo pages
-  src/wallphoto.js the owner's real photo hung on a wall (P key); findings in it get source 'photo'
+  src/wallphoto.js a real photo hung on a wall (P key); findings in it get source 'photo'
   home.html  src/home.js  your home from its floor plan: overlay of what was read + 3D shell (overview, walk)
   src/game.js      timer, flagging, client chat, scoring
   public/decals/   *.png + decals.json
@@ -150,7 +150,7 @@ web/
   tests/home.mjs   plan -> shell -> 3D on real plans you pass in (listing plans are not in git)
 server/app.py      FastAPI: /api/health, /api/detect, /api/client/*
 server/detector.py RF-DETR checkpoint loader + predict
-server/inspections.py  move-in / move-out inspections as files in data/inspections (API: /api/inspections, see TODO.md)
+server/inspections.py  move-in / move-out inspections as files in data/inspections (API: /api/inspections)
 server/compare.py  lines up a move-out photo with its move-in photo and marks each problem existing / new
 server/floorplan.py  floor plan picture -> walls (boxes), doors, windows, stairs, room names in metres (POST /api/floorplan).
                   No AI: OpenCV for the drawing; Tesseract reads the written lengths, which set the scale.

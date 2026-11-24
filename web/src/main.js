@@ -79,7 +79,7 @@ const card = $('#card'), chip = $('#chip'), status = $('#status'), summary = $('
 const minimap = createMinimap($('#minimap'));
 let openId = null, hover = null;
 
-// The owner's real photos. Pins measured from a photo go when that photo moves, changes size or is removed.
+// Real wall photos added by the user. Pins measured from a photo go when that photo moves, changes size or is removed.
 const wall = createWallPhotos(app, { onMove: (was) => pins.findings.filter((f) => f.source === 'photo' && was(f.pos)).forEach((f) => pins.remove(f.id)) });
 export const pins = createPins(app, {
   source: (pos) => (wall.contains(pos) ? 'photo' : null),
@@ -167,7 +167,7 @@ export async function analyze(source) {
 }
 $('#analyze').addEventListener('click', () => analyze());
 
-// --- The owner's wall photos ---
+// --- Wall photos ---
 function syncPhoto(message) {
   $('#photo-remove').hidden = !wall.placed;
   $('#hint-photo').hidden = !wall.has;

@@ -12,6 +12,10 @@ not connected there yet, so photo analysis, floor plans and saved inspections ne
 (below). It can be connected easily: host the server anywhere that runs Docker and forward
 `/api` to it from Vercel.
 
+![Walking the demo apartment](docs/living.jpg)
+
+![A finding pinned on a bedroom wall, with its size and repair estimate](docs/finding.jpg)
+
 ## What you can do with it
 
 | Page | Address | What it is for |
@@ -34,8 +38,9 @@ Needs macOS on Apple silicon, [uv](https://docs.astral.sh/uv/) and Node 20 or ne
     uv run uvicorn server.app:app --port 8000        # the detector (first terminal)
     npm --prefix web run dev                         # the app (second terminal)
 
-Then open http://localhost:5173. The trained model is `models/detector.pth` (not in git:
-train it as below, or copy the file from the machine that trained it).
+Then open http://localhost:5173. The server needs the trained model at `models/detector.pth`.
+It is not in git: [download it from the release](https://github.com/Ekagraj/Inspecto/releases/download/model-v1/detector.pth)
+(121 MB) and put it in `models/`, or train your own as below.
 
 **From a phone on the same Wi-Fi:** start the app with `npm --prefix web run dev:phone`
 instead and open the "Network" address it prints. Adding a photo opens the phone's camera.
@@ -59,10 +64,18 @@ Both servers must be running. Tests drive a real browser and the real detector.
 
 ## How good is the detector?
 
-Run `uv run ml/evaluate.py`: it scores the model on real photos it never trained on and
-writes `results/eval.md` and `results/eval.png`. Read that file rather than trusting a
-number quoted here. Two things to keep in mind: scores inside the 3D home flatter the model
-(those views reuse training images), and scuffs and holes have little training data.
+| Test set | Precision | Recall |
+|---|---|---|
+| Rendered inspection views inside the 3D apartment | 88% | 85% |
+| Real photos never seen in training (original dataset, 225 photos) | 95% | 89% |
+| Harder real photos from eight other datasets (784 photos) | 61% | 31% |
+
+Confidence threshold 0.4, IoU 0.5. The first row flatters the model, because those views reuse
+training images. The last row is the real gap: mold and water stains are often confused with
+each other, and scuffs and holes have little training data.
+
+To reproduce the real-photo rows, run `uv run ml/evaluate.py`. It writes a per-class
+breakdown to `results/eval.md`.
 
 ## Train it
 
@@ -87,7 +100,7 @@ previous model as `models/detector_before_extra.pth`. Never run two trainings at
   says so and asks you to decide.
 - **Local prices:** the cost table times the local mean wage of painters over the US mean.
 
-`ARCHITECTURE.md` has the full design, `TODO.md` what is left.
+`ARCHITECTURE.md` has the full design.
 
 ## Credits and licences
 

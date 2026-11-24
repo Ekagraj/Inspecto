@@ -1,7 +1,7 @@
 #!/bin/sh
 # Train the detector on everything: real photos, rendered views and the extra photos prepared by
 # ml/prep_extra.py (7 classes: scuff and hole are new). Run from the repo root, laptop plugged in
-# and lid open; caffeinate keeps it awake. It does not need Claude or a terminal left open:
+# and lid open; caffeinate keeps it awake. No terminal needs to stay open:
 #   nohup caffeinate -is sh ml/train_more.sh > train_more.log 2>&1 &
 # A full run is 6 rounds, about 3 to 3.5 hours on an M3. The app lags while it runs.
 #

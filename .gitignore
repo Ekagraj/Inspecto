@@ -17,3 +17,7 @@ floor/
 results/
 .vercel
 .env*
+
+# Private working notes
+TODO.md
+NEXT_STEPS.md
