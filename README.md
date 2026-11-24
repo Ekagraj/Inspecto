@@ -14,7 +14,9 @@ not connected there yet, so photo analysis, floor plans and saved inspections ne
 
 ![Walking the demo apartment](docs/living.jpg)
 
-![A finding pinned on a bedroom wall, with its size and repair estimate](docs/finding.jpg)
+![A water stain the detector found on a bedroom wall (92% confidence), pinned in 3D with its size and repair estimate](docs/finding.jpg)
+
+*Both screenshots are from a real run: every pin was placed by the trained detector, not by hand.*
 
 ## What you can do with it
 
@@ -66,11 +68,11 @@ Both servers must be running. Tests drive a real browser and the real detector.
 
 | Test set | Precision | Recall |
 |---|---|---|
-| Rendered inspection views inside the 3D apartment | 88% | 85% |
+| Rendered inspection views inside the 3D apartment (3 homes, 67 planted defects) | 90% | 81% |
 | Real photos never seen in training (original dataset, 225 photos) | 95% | 89% |
 | Harder real photos from eight other datasets (784 photos) | 61% | 31% |
 
-Confidence threshold 0.4, IoU 0.5. The first row flatters the model, because those views reuse
+All rows use the released model ([`detector.pth`](https://github.com/Ekagraj/Inspecto/releases/tag/model-v1), seven damage types). Confidence threshold 0.4, IoU 0.5. The first row flatters the model, because those views reuse
 training images. The last row is the real gap: mold and water stains are often confused with
 each other, and scuffs and holes have little training data.
 
