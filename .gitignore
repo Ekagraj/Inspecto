@@ -15,3 +15,5 @@ floor/
 
 # Local eval outputs, regenerate with ml/eval_plans.py
 results/
+.vercel
+.env*
