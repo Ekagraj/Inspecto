@@ -2,8 +2,8 @@ node_modules/
 dist/
 .venv/
 __pycache__/
-data/
-models/
+/data/
+/models/
 .DS_Store
 *.pth
 test-results/
