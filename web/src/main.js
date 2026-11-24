@@ -158,7 +158,7 @@ export async function analyze(source) {
   } catch (e) {
     console.warn(e);
     pins.visible = true;
-    status.textContent = 'Detector offline. Start the server (see README).';
+    status.textContent = 'Live detection runs locally. See the GitHub README for screenshots and results.';
     return null;
   } finally {
     busy = false;
