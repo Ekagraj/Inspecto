@@ -1,5 +1,6 @@
 // The live demo as visitors get it: a production build, no Python server, detection in the browser.
 // Usage: npm run build && npx vite preview --port 4173 &   then   node tests/live.mjs PHOTO.jpg [chrome|webkit|all] [base URL]
+// A protected Vercel preview: VERCEL_SHARE=<_vercel_share token> node tests/live.mjs PHOTO.jpg all https://<preview>
 // Checks: photo page and 3D Analyze find damage; the one-time download message names the size; a second visit
 // loads the model from the cache, not the network; nothing is POSTed and /api is never called; the backend
 // follows the rule (WebGPU on desktop Chrome, WASM on Safari and mobile); a failed model download says so.
@@ -20,8 +21,10 @@ async function run(name, type, contextOptions, wantBackend) {
   const context = await profile(type, contextOptions);
   const requests = [];
   const hosts = new Set();
-  context.on('request', (r) => { const u = new URL(r.url()); requests.push(`${r.method()} ${u.pathname}`); if (u.origin !== new URL(base).origin) hosts.add(u.hostname); });
-  const page = await context.newPage();
+  context.on('request', (r) => { const u = new URL(r.url()); if (u.hostname === 'vercel.live') return; // Vercel's toolbar, injected on preview deployments only
+    requests.push(`${r.method()} ${u.pathname}`); if (u.origin !== new URL(base).origin) hosts.add(u.hostname); });
+  const page = context.pages()[0] ?? await context.newPage();
+  if (process.env.VERCEL_SHARE) await page.goto(`${base}/?_vercel_share=${process.env.VERCEL_SHARE}`); // sets the preview's access cookie
   const statuses = new Set();
   await page.exposeFunction('seen', (t) => statuses.add(t));
   await page.addInitScript(() => new MutationObserver(() => document.querySelectorAll('[role=status], #status').forEach((e) => e.textContent && window.seen(e.textContent)))
@@ -74,6 +77,7 @@ async function failingDownload(type, options) {
   console.log('\n# model download blocked');
   const browser = await type.launch(options);
   const page = await browser.newPage();
+  if (process.env.VERCEL_SHARE) await page.goto(`${base}/?_vercel_share=${process.env.VERCEL_SHARE}`);
   await page.route('**/onnx/**', (r) => r.fulfill({ status: 404, body: 'not found' }));
   await page.goto(`${base}/photo.html`);
   await page.setInputFiles('.drop input', photo);
