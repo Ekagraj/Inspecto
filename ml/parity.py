@@ -7,6 +7,12 @@
    score difference and the lowest IoU of a pair.
 2. The metrics table, read from results/eval_<tag>.csv written by ml/evaluate.py (tag "torch" for
    PyTorch, the ONNX file's stem minus "detector-" for each export).
+
+  uv run --group export ml/parity.py --dump DIR models/onnx/detector-fp32.onnx
+
+writes the reference for the browser check (web/tests/browser-parity.mjs) instead: the same 20 photos
+plus a portrait phone-style photo (EXIF orientation 6), each with Python's ONNX boxes and its model
+input tensor (<n>.f32, raw float32).
 """
 import csv, pathlib, sys
 
@@ -27,12 +33,41 @@ def compare(ref, got):
             min((iou(r["box"], g["box"]) for r, g in pairs), default=1.0))
 
 
+def dump(out, export, photos):
+    """Reference boxes and input tensors for the browser check."""
+    import json
+    from PIL import Image
+    from server.detector import OnnxDetector, preprocess
+    out.mkdir(parents=True, exist_ok=True)
+    # Portrait phone photo: the camera stores the picture sideways and EXIF orientation 6 says "turn 90° clockwise".
+    src = Image.open(photos[0]).convert("RGB")
+    upright = src.crop((0, 0, src.height * 3 // 4, src.height)).resize((1512, 2016), Image.BILINEAR)
+    exif = Image.Exif()
+    exif[0x0112] = 6
+    upright.transpose(Image.ROTATE_90).save(out / "portrait_exif6.jpg", quality=92, exif=exif)
+    upright.save(out / "portrait_upright.jpg", quality=92)
+    photos = [*photos, out / "portrait_exif6.jpg", out / "portrait_upright.jpg"]
+    model = OnnxDetector(export)
+    ref = []
+    for i, path in enumerate(photos):
+        x = preprocess(Image.open(path))
+        x.tofile(out / f"{i}.f32")
+        ref.append({"path": str(pathlib.Path(path).resolve()), "tensor": f"{i}.f32", "dets": model.predict(Image.open(path))})
+    (out / "ref.json").write_text(json.dumps(ref, indent=1))
+    a, b = ref[-2]["dets"], ref[-1]["dets"]
+    print(f"{len(photos)} photos -> {out}. Portrait EXIF 6 vs the same photo saved upright: {compare(b, a)[:3]} (pairs, only upright, only EXIF)")
+
+
 if __name__ == "__main__":
     from PIL import Image
     from server.detector import Detector, OnnxDetector
-    exports = [pathlib.Path(p) for p in sys.argv[1:]]
+    args = sys.argv[1:]
     sets = load_sets()
     photos = [p for items in sets.values() for p, _ in items[:10]]
+    if args[:1] == ["--dump"]:
+        dump(pathlib.Path(args[1]), pathlib.Path(args[2]), photos)
+        sys.exit()
+    exports = [pathlib.Path(p) for p in args]
     torch_model = Detector()
     print("## Raw boxes, 20 photos, threshold 0.4\n\n| Build | Boxes (PyTorch) | Paired | Only in PyTorch | Only in ONNX | Worst score diff | Lowest pair IoU |\n|---|---|---|---|---|---|---|")
     ref = [torch_model.predict(Image.open(p)) for p in photos]

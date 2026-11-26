@@ -1,14 +1,14 @@
 // In-app detector check: real detector vs ground-truth boxes on rendered views of homes with
 // freshly planted defects. Note: decals come from the same pool the detector trained on, so this
 // measures "does it work in the app", not generalisation (ml/evaluate.py does that on real photos).
-// Usage: node tests/detect-eval.mjs [seeds=3] [shots=20]   (dev server + API server running)
+// Usage: node tests/detect-eval.mjs [seeds=3] [shots=20] [query, e.g. '?detector=browser&ep=wasm']   (dev server + API server running)
 import { chromium } from 'playwright';
 
 const seeds = +(process.argv[2] ?? 3), shots = +(process.argv[3] ?? 20);
 const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 page.on('pageerror', (e) => { console.error(String(e)); process.exit(1); });
-await page.goto('http://localhost:5173/');
+await page.goto(`http://localhost:5173/${process.argv[4] ?? ''}`);
 await page.waitForFunction(() => window.inspecto);
 await page.click('#enter');
 

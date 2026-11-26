@@ -21,3 +21,6 @@ results/
 # Private working notes
 TODO.md
 NEXT_STEPS.md
+
+# ONNX detector builds: hosted outside git (see README)
+/web/public/onnx/

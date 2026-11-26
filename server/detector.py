@@ -9,6 +9,13 @@ LABELS = ["crack", "mold", "peeling_paint", "stairstep_crack", "water_seepage", 
 THRESHOLD = 0.4
 
 
+def upright(image):
+    """Turn the photo the way its EXIF says, as browsers do (createImageBitmap 'from-image'), then RGB.
+    Boxes are relative to the upright photo on both sides."""
+    from PIL import ImageOps
+    return ImageOps.exif_transpose(image).convert("RGB")
+
+
 class Detector:
     def __init__(self, weights=WEIGHTS):
         from rfdetr import RFDETRNano
@@ -16,7 +23,8 @@ class Detector:
 
     def predict(self, image, threshold=THRESHOLD):
         """PIL image -> [{label, score, box: [x1, y1, x2, y2] in 0..1}]"""
-        det = self.model.predict(image.convert("RGB"), threshold=threshold)
+        image = upright(image)
+        det = self.model.predict(image, threshold=threshold)
         w, h = image.size
         return [
             {"label": LABELS[int(c)], "score": round(float(s), 3),
@@ -45,7 +53,7 @@ def resize_bilinear(x, size=SIZE):
 
 def preprocess(image):
     """PIL image -> (1, 3, 384, 384) float32: RGB / 255, bilinear resize, ImageNet mean/std."""
-    x = resize_bilinear(np.asarray(image.convert("RGB"), dtype=np.float32) / 255)
+    x = resize_bilinear(np.asarray(upright(image), dtype=np.float32) / 255)
     return ((x - MEAN) / STD).astype(np.float32).transpose(2, 0, 1)[None]
 
 
