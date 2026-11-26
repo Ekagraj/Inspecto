@@ -6,7 +6,8 @@
     "dev": "vite",
     "dev:phone": "vite --host",
     "build": "vite build",
-    "test": "node tests/smoke.mjs"
+    "test": "node tests/smoke.mjs",
+    "prebuild": "node scripts/fetch-model.mjs"
   },
   "dependencies": {
     "onnxruntime-web": "^1.31.1",
