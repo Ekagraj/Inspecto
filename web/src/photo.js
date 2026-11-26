@@ -53,14 +53,14 @@ async function addFiles(files) {
     try {
       bmp = await decode(file);
     } catch {
-      problems.push(`"${file.name}" is not an image that could be read (JPEG, PNG and iPhone HEIC or DNG photos work).`);
+      problems.push(`"${file.name}" is not an image that could be read. JPEG and PNG work everywhere; iPhone HEIC photos open in Safari (other browsers need the local server, see the README).`);
       continue;
     }
     let detections;
     try {
-      detections = merge(await detect(toJpeg(bmp, 1280, 0.9)));
-    } catch {
-      problems.push('The detector is not answering. Start it with: uv run uvicorn server.app:app --port 8000');
+      detections = merge(await detect(toJpeg(bmp, 1280, 0.9), (text) => { if (status?.text !== text) { status = { text }; render(); } }));
+    } catch (e) {
+      problems.push(e.message);
       break;
     }
     photos.unshift({ n: Math.max(0, ...photos.map((p) => p.n)) + 1, thumb: toJpeg(bmp, 800, 0.8), aspect: bmp.width / bmp.height, widthM: 1, detections });
@@ -86,7 +86,7 @@ function notice() {
     'The size of each problem is worked out from the width you enter under the photo, so check it. ',
     'Every photo is priced on its own, so do not add the same damage twice. ',
     'Placing a photo in the 3D home checks your wall, not your room layout. ',
-    `${COST_NOTE} Photos are analyzed on this laptop and never uploaded.`);
+    `${COST_NOTE} Photos are analyzed in this browser and never uploaded.`);
 }
 
 function setArea(next, note = '') {

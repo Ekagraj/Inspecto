@@ -149,7 +149,7 @@ export async function analyze(source) {
     const shot = capture(app);
     pins.visible = true;
     // Let the scan sweep play at least once when a person is watching.
-    const [dets] = await Promise.all([source ? source(shot) : detect(shot.image), source ? 0 : new Promise((r) => setTimeout(r, 700))]);
+    const [dets] = await Promise.all([source ? source(shot) : detect(shot.image, (text) => { status.textContent = text; }), source ? 0 : new Promise((r) => setTimeout(r, 700))]);
     showBoxes(dets);
     const r = pins.addDetections(dets, shot);
     status.textContent = !dets.length ? 'Nothing found in this view'
@@ -158,7 +158,7 @@ export async function analyze(source) {
   } catch (e) {
     console.warn(e);
     pins.visible = true;
-    status.textContent = 'Live detection runs locally. See the GitHub README for screenshots and results.';
+    status.textContent = e.message;
     return null;
   } finally {
     busy = false;

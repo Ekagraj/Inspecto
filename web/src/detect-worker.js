@@ -1,29 +1,53 @@
 // The damage detector, run in the browser (onnxruntime-web) inside a worker so the 3D view never stalls.
 // Pre- and post-processing copy server/detector.py (preprocess, postprocess) step for step.
-import * as ort from 'onnxruntime-web/webgpu';
 
 const SIZE = 384, MEAN = [0.485, 0.456, 0.406], STD = [0.229, 0.224, 0.225];
 const LABELS = ['crack', 'mold', 'peeling_paint', 'stairstep_crack', 'water_seepage', 'scuff', 'hole'];
 const THRESHOLD = 0.4;
 
-let ready = null; // Promise<{session, backend}>
+let ready = null; // Promise<{ort, session, backend, timing}>
+const CACHE = 'inspecto-detector-v1'; // rename when the model file changes, so old copies are deleted
 
-async function open(url, backend) {
+/** The model file, from the Cache API after the first visit. Reports download progress. */
+async function modelBytes(url, progress) {
+  const cache = self.caches ? await caches.open(CACHE).catch(() => null) : null; // no Cache API on plain http
+  let res = await cache?.match(url);
+  const cached = Boolean(res);
+  if (!res) {
+    res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  }
+  const parts = [], reader = res.body.getReader();
+  let loaded = 0;
+  for (let r; !(r = await reader.read()).done;) {
+    parts.push(r.value);
+    loaded += r.value.length;
+    progress({ loaded, cached });
+  }
+  const bytes = new Uint8Array(loaded);
+  parts.reduce((at, part) => (bytes.set(part, at), at + part.length), 0);
+  if (cache && !cached) await cache.put(url, new Response(bytes)).catch(() => {}); // storage full: works, just not kept
+  for (const name of await self.caches?.keys() ?? []) if (name.startsWith('inspecto-detector') && name !== CACHE) caches.delete(name);
+  return { bytes, cached };
+}
+
+async function open(url, backend, strict, progress) {
   const t0 = performance.now();
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`The detector model could not be downloaded (HTTP ${res.status}).`);
-  const bytes = new Uint8Array(await res.arrayBuffer());
+  const { bytes, cached } = await modelBytes(url, progress);
   const t1 = performance.now();
-  const create = async (ep) => ({ session: await ort.InferenceSession.create(bytes, { executionProviders: [ep] }), backend: ep });
+  progress({ compiling: true, cached });
+  // WASM-only browsers load the smaller onnxruntime build (14 MB of wasm instead of 29).
+  const ort = await (backend === 'webgpu' ? import('onnxruntime-web/webgpu') : import('onnxruntime-web/wasm'));
+  const create = async (ep) => ({ ort, session: await ort.InferenceSession.create(bytes, { executionProviders: [ep] }), backend: ep });
   let out = null;
-  if (backend !== 'wasm' && self.navigator.gpu) {
+  if (backend === 'webgpu' && self.navigator.gpu) {
     try { out = await create('webgpu'); } catch (e) {
-      if (backend === 'webgpu') throw e;
+      if (strict) throw e;
       console.warn('WebGPU unavailable, using WASM:', e);
     }
-  }
+  } else if (backend === 'webgpu' && strict) throw new Error('WebGPU is not available in this browser');
   out ??= await create('wasm');
-  return { ...out, timing: { fetchMs: Math.round(t1 - t0), createMs: Math.round(performance.now() - t1), bytes: bytes.length } };
+  return { ...out, timing: { fetchMs: Math.round(t1 - t0), createMs: Math.round(performance.now() - t1), bytes: bytes.length, cached } };
 }
 
 /** Data URL, Blob or File -> upright RGBA pixels at full size. No colour management, as PIL. */
@@ -82,13 +106,17 @@ export function postprocess(boxes, logits, classes, threshold = THRESHOLD) {
   return out;
 }
 
-self.onmessage = async ({ data: { id, type, url, backend, image } }) => {
+self.onmessage = async ({ data: { id, type, url, backend, strict, image } }) => {
+  let loading = false;
   try {
     const px = await pixels(image);
     const input = preprocess(px);
     if (type === 'tensor') return self.postMessage({ id, tensor: input, width: px.width, height: px.height }, [input.buffer]);
-    ready ??= open(url, backend).catch((e) => { ready = null; throw e; }); // a failed load is retried next time
-    const { session, backend: used, timing } = await ready;
+    loading = true;
+    ready ??= open(url, backend, strict, (progress) => self.postMessage({ id, progress }))
+      .catch((e) => { ready = null; throw e; }); // a failed load is retried next time
+    const { ort, session, backend: used, timing } = await ready;
+    loading = false;
     const t = performance.now();
     const res = await session.run({ input: new ort.Tensor('float32', input, [1, 3, SIZE, SIZE]) });
     const detections = postprocess(res.dets.data, res.labels.data, res.labels.dims[2]);
@@ -96,6 +124,6 @@ self.onmessage = async ({ data: { id, type, url, backend, image } }) => {
     for (const v of Object.values(res)) v.dispose?.();
     self.postMessage({ id, detections, ms, backend: used, timing, width: px.width, height: px.height });
   } catch (e) {
-    self.postMessage({ id, error: String(e?.message || e) });
+    self.postMessage({ id, error: String(e?.message || e), loading });
   }
 };
