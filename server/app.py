@@ -1,5 +1,5 @@
 """Local API for the AI Home Inspector. Run: uv run uvicorn server.app:app --port 8000"""
-import base64, io, subprocess, tempfile, time
+import base64, io, os, subprocess, tempfile, time
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, JSONResponse
@@ -7,7 +7,7 @@ from PIL import Image
 from pydantic import BaseModel
 
 from . import inspections
-from .detector import Detector, WEIGHTS
+from .detector import Detector, OnnxDetector, WEIGHTS
 
 app = FastAPI(title="AI Home Inspector")
 _detector = None
@@ -23,7 +23,8 @@ def detector():
     if _detector is None:
         if not WEIGHTS.exists():
             raise HTTPException(503, "No detector weights. Run: uv run ml/train.py (see README)")
-        _detector = Detector()
+        onnx = os.environ.get("INSPECTO_ONNX")  # e.g. models/onnx/detector-fp16.onnx, to test the browser build's model
+        _detector = OnnxDetector(onnx) if onnx else Detector()
     return _detector
 
 

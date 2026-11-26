@@ -3,6 +3,7 @@
   uv run ml/evaluate.py                    # the model in use, every test photo
   uv run ml/evaluate.py --limit 20         # quick check
   uv run ml/evaluate.py --weights models/detector_before_extra.pth --tag before
+  uv run --group export ml/evaluate.py --onnx models/onnx/detector-fp32.onnx --tag onnx-fp32
 
 Two test sets:
 - "original": data/test, 225 photos from the first dataset (almost all cracks).
@@ -104,12 +105,13 @@ if __name__ == "__main__":
     ap.add_argument("--weights", default=str(ROOT / "models" / "detector.pth"))
     ap.add_argument("--limit", type=int, default=0, help="only the first N photos of each set")
     ap.add_argument("--tag", default="", help="suffix for the output files, e.g. 'before'")
+    ap.add_argument("--onnx", default="", help="score an ONNX export through onnxruntime instead of --weights")
     a = ap.parse_args()
     selfcheck()
 
     from PIL import Image
-    from server.detector import Detector, LABELS, THRESHOLD
-    detector = Detector(a.weights)
+    from server.detector import Detector, OnnxDetector, LABELS, THRESHOLD
+    detector = OnnxDetector(a.onnx) if a.onnx else Detector(a.weights)
     rows, notes = [], []
     for set_name, items in load_sets().items():
         items = items[: a.limit] if a.limit else items
@@ -155,7 +157,7 @@ if __name__ == "__main__":
         w = csv.DictWriter(f, fieldnames=list(rows[0]))
         w.writeheader()
         w.writerows({k: (round(v, 4) if isinstance(v, float) else v) for k, v in r.items()} for r in rows)
-    md = [f"# Detector on real photos it never trained on\n\nWeights: `{pathlib.Path(a.weights).name}`. Confidence threshold {THRESHOLD}, IoU 0.5."
+    md = [f"# Detector on real photos it never trained on\n\nWeights: `{pathlib.Path(a.onnx or a.weights).name}`. Confidence threshold {THRESHOLD}, IoU 0.5."
           + (f" Only the first {a.limit} photos of each set." if a.limit else "") + "\n"]
     for set_name in dict.fromkeys(r["set"] for r in rows):
         md += [f"\n## {set_name}\n", "| Class | True boxes | Precision | Recall | F1 | AP50 | False alarms |", "|---|---|---|---|---|---|---|"]
