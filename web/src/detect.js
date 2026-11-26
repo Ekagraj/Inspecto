@@ -14,9 +14,11 @@ export function capture({ renderer, scene, camera }, maxW = 768) {
 }
 
 // Where detection runs: in dev (npm run dev), the local Python server when it is running; otherwise, and always in
-// a production build such as the live demo, in this browser, so nothing is uploaded. ?detector=browser|server forces one; ?ep=wasm|webgpu forces the browser backend.
+// a production build such as the live demo, in this browser, so nothing is uploaded.
+// Test switches: ?detector=browser|server, ?ep=wasm|webgpu (browser backend), ?model=fp32|fp16 (ONNX build).
 const query = new URLSearchParams(location.search);
-export const MODEL_URL = import.meta.env.VITE_MODEL_URL || '/onnx/detector-fp32.onnx';
+const BUILD = query.get('model') === 'fp32' ? 'fp32' : 'fp16'; // fp16: half the download, same results (README)
+export const MODEL_URL = import.meta.env.VITE_MODEL_URL || `/onnx/detector-${BUILD}.onnx`;
 let useServer = null;
 
 async function serverUp() {

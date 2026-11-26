@@ -1,17 +1,17 @@
 // In-browser detector vs the Python ONNX reference, on the same photos.
 // 1. ml/parity.py --dump DIR writes the reference (boxes + model input tensors).
-// 2. node tests/browser-parity.mjs DIR [chromium|webkit|chrome] [webgpu|wasm]   (dev server running)
+// 2. node tests/browser-parity.mjs DIR [chromium|webkit|chrome] [webgpu|wasm] [fp32|fp16]   (dev server running)
 // Reports the resized-tensor difference and a box table like ml/parity.py's.
 import { chromium, webkit } from 'playwright';
 import { readFileSync } from 'node:fs';
 
-const [dir, engine = 'chromium', ep = ''] = process.argv.slice(2);
+const [dir, engine = 'chromium', ep = '', model = 'fp16'] = process.argv.slice(2);
 const ref = JSON.parse(readFileSync(`${dir}/ref.json`, 'utf8'));
 const launch = engine === 'webkit' ? webkit.launch() : chromium.launch({ channel: engine === 'chrome' ? 'chrome' : undefined, args: ['--enable-unsafe-webgpu', '--ignore-gpu-blocklist'] });
 const browser = await launch;
 const page = await browser.newPage();
 page.on('console', (m) => m.type() === 'warning' && console.log('  [page]', m.text().slice(0, 200)));
-await page.goto(`http://localhost:5173/photo.html?detector=browser${ep ? `&ep=${ep}` : ''}`);
+await page.goto(`http://localhost:5173/photo.html?detector=browser${ep ? `&ep=${ep}` : ''}&model=${model}`);
 
 const iou = (a, b) => {
   const w = Math.min(a[2], b[2]) - Math.max(a[0], b[0]), h = Math.min(a[3], b[3]) - Math.max(a[1], b[1]);
@@ -56,7 +56,7 @@ for (const r of ref) {
 }
 await browser.close();
 // Tensor values are (pixel / 255 - mean) / std, so one grey level is about 1 / (255 * 0.225) = 0.017.
-console.log(`\n${engine}, ${backend}: input tensor max |diff| ${worstTensor.toExponential(2)} (${(worstTensor * 255 * 0.229).toFixed(3)} grey levels), mean ${(sumMean / ref.length).toExponential(2)}`);
+console.log(`\n${engine}, ${model}, ${backend}: input tensor max |diff| ${worstTensor.toExponential(2)} (${(worstTensor * 255 * 0.229).toFixed(3)} grey levels), mean ${(sumMean / ref.length).toExponential(2)}`);
 console.log(`| Build | Photos | Boxes (Python ONNX) | Paired | Only in Python | Only in browser | Worst score diff | Lowest pair IoU |`);
-console.log(`| browser ${backend} (${engine}) | ${ref.length} | ${rows.reduce((s, c) => s + c.pairs + c.onlyRef, 0)} | ${rows.reduce((s, c) => s + c.pairs, 0)} | ${rows.reduce((s, c) => s + c.onlyRef, 0)} | ${rows.reduce((s, c) => s + c.onlyBrowser, 0)} | ${Math.max(...rows.map((c) => c.score)).toFixed(3)} | ${Math.min(...rows.map((c) => c.iou)).toFixed(3)} |`);
+console.log(`| browser ${model} ${backend} (${engine}) | ${ref.length} | ${rows.reduce((s, c) => s + c.pairs + c.onlyRef, 0)} | ${rows.reduce((s, c) => s + c.pairs, 0)} | ${rows.reduce((s, c) => s + c.onlyRef, 0)} | ${rows.reduce((s, c) => s + c.onlyBrowser, 0)} | ${Math.max(...rows.map((c) => c.score)).toFixed(3)} | ${Math.min(...rows.map((c) => c.iou)).toFixed(3)} |`);
 process.exit(bad ? 1 : 0);

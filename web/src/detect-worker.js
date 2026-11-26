@@ -9,16 +9,21 @@ const THRESHOLD = 0.4;
 let ready = null; // Promise<{session, backend}>
 
 async function open(url, backend) {
-  const bytes = new Uint8Array(await (await fetch(url)).arrayBuffer());
+  const t0 = performance.now();
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`The detector model could not be downloaded (HTTP ${res.status}).`);
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  const t1 = performance.now();
+  const create = async (ep) => ({ session: await ort.InferenceSession.create(bytes, { executionProviders: [ep] }), backend: ep });
+  let out = null;
   if (backend !== 'wasm' && self.navigator.gpu) {
-    try {
-      return { session: await ort.InferenceSession.create(bytes, { executionProviders: ['webgpu'] }), backend: 'webgpu' };
-    } catch (e) {
+    try { out = await create('webgpu'); } catch (e) {
       if (backend === 'webgpu') throw e;
       console.warn('WebGPU unavailable, using WASM:', e);
     }
   }
-  return { session: await ort.InferenceSession.create(bytes, { executionProviders: ['wasm'] }), backend: 'wasm' };
+  out ??= await create('wasm');
+  return { ...out, timing: { fetchMs: Math.round(t1 - t0), createMs: Math.round(performance.now() - t1), bytes: bytes.length } };
 }
 
 /** Data URL, Blob or File -> upright RGBA pixels at full size. No colour management, as PIL. */
@@ -83,13 +88,13 @@ self.onmessage = async ({ data: { id, type, url, backend, image } }) => {
     const input = preprocess(px);
     if (type === 'tensor') return self.postMessage({ id, tensor: input, width: px.width, height: px.height }, [input.buffer]);
     ready ??= open(url, backend).catch((e) => { ready = null; throw e; }); // a failed load is retried next time
-    const { session, backend: used } = await ready;
+    const { session, backend: used, timing } = await ready;
     const t = performance.now();
     const res = await session.run({ input: new ort.Tensor('float32', input, [1, 3, SIZE, SIZE]) });
     const detections = postprocess(res.dets.data, res.labels.data, res.labels.dims[2]);
     const ms = Math.round(performance.now() - t);
     for (const v of Object.values(res)) v.dispose?.();
-    self.postMessage({ id, detections, ms, backend: used, width: px.width, height: px.height });
+    self.postMessage({ id, detections, ms, backend: used, timing, width: px.width, height: px.height });
   } catch (e) {
     self.postMessage({ id, error: String(e?.message || e) });
   }

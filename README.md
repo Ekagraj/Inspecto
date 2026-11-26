@@ -79,6 +79,70 @@ each other, and scuffs and holes have little training data.
 To reproduce the real-photo rows, run `uv run ml/evaluate.py`. It writes a per-class
 breakdown to `results/eval.md`.
 
+## The detector in the browser
+
+The same model also runs in the browser itself (onnxruntime-web in a Web Worker, WebGPU, or
+WASM where WebGPU is missing). The app uses the **fp16 build** (54 MB; the fp32 build is 108 MB):
+same results within half a point, half the download. GridSample nodes stay fp32.
+
+Is the exported model the same detector? Precision / recall, threshold 0.4, IoU 0.5:
+
+| Test set | PyTorch | ONNX fp32 | ONNX fp16 |
+|---|---|---|---|
+| Rendered 3D views (`detect-eval.mjs 3 20`) | 90% / 81% | 90% / 81% | 90% / 81% |
+| Real photos, original (225) | 94.8% / 88.7% | 94.8% / 88.7% | 94.4% / 88.7% |
+| Real photos, eight other datasets (784) | 61.4% / 30.9% | 61.4% / 30.9% | 61.2% / 30.7% |
+
+The rendered-view row is the same in every build when the 3D views are rendered the same
+way. Rendered by Chrome on a real GPU instead of headless Chromium's software renderer, all
+three score 87% / 81%.
+
+Box by box, on 20 test photos plus a portrait phone photo (EXIF orientation 6):
+
+| Compared | Boxes | Paired | Unpaired | Worst score diff | Lowest IoU |
+|---|---|---|---|---|---|
+| ONNX fp32 vs PyTorch (Python) | 33 | 33 | 0 | 0.000 | 1.000 |
+| ONNX fp16 vs PyTorch (Python) | 33 | 33 | 0 | 0.011 | 0.987 |
+| Browser fp32 vs Python ONNX fp32, Chrome, WebGPU and WASM | 35 | 35 | 0 | 0.000 | 1.000 |
+| Browser fp16 vs Python ONNX fp16, Chrome, WebGPU | 35 | 35 | 1 extra | 0.031 | 0.975 |
+| Browser fp16 vs Python ONNX fp16, Chrome, WASM | 35 | 35 | 0 | 0.002 | 0.978 |
+| Browser fp32 vs Python ONNX fp32, Safari engine (WebKit) | 35 | 34 | 1 + 2 extra | 0.074 | 0.895 |
+
+The browser resizes the photo itself (plain bilinear, as the model was trained), not with the
+canvas, and turns phone photos upright from their EXIF, as the Python side now does too. Its
+model input matches Python's to 1e-6. WebKit decodes JPEGs with Apple's decoder, which differs
+from the one Python and Chrome use by about a third of a grey level on average; that moved two
+borderline boxes. Given the same pixels (PNG), WebKit matches exactly.
+
+Reproduce (dev server running for the browser part):
+
+    uv sync --group export
+    uv run --group export ml/export_onnx.py                  # models/onnx/detector-fp32.onnx, -fp16.onnx
+    uv run --group export ml/evaluate.py --tag torch         # then --onnx models/onnx/detector-fp32.onnx --tag fp32, and fp16
+    uv run --group export ml/parity.py models/onnx/detector-fp32.onnx models/onnx/detector-fp16.onnx
+    uv run --group export ml/parity.py --dump /tmp/ref16 models/onnx/detector-fp16.onnx
+    node web/tests/browser-parity.mjs /tmp/ref16 chrome webgpu fp16
+
+Speed and memory on an M3 MacBook (macOS 26, Chrome and Playwright's WebKit, median of 20
+photos, model served locally, so a real first visit adds the download time):
+
+| Browser | Backend | Build | Compile | First run | Per photo | Memory | After freeing |
+|---|---|---|---|---|---|---|---|
+| Chrome | WebGPU | fp16 | 0.6 s | 0.13 s | 42 ms | +0.4 to 0.7 GB | +27 MB |
+| Chrome | WebGPU | fp32 | 0.6 s | 0.13 s | 53 ms | +0.6 GB | |
+| Chrome | WASM | fp16 | 0.65 s | 0.81 s | 0.75 s | +0.33 to 0.37 GB | +9 MB |
+| Chrome | WASM | fp32 | 0.5 s | 0.77 s | 0.71 s | +0.35 GB | |
+| WebKit | WebGPU | fp16 | 0.8 s | 0.11 s | 51 ms | +1.2 to 1.7 GB | +0.8 to 1.1 GB |
+| WebKit | WebGPU | fp32 | 0.8 s | 0.11 s | 65 ms | +1.3 to 1.4 GB | |
+| WebKit | WASM | fp16 | 0.9 s | 0.80 s | 0.75 s | +0.43 GB | +58 MB |
+| WebKit | WASM | fp32 | 0.7 s | 0.76 s | 0.70 s | +0.47 GB | |
+
+"Per photo" includes decoding and resizing. Memory is every browser process, GPU included.
+"After freeing" is after `freeDetector()`, which runs when the page is left. WebKit keeps most
+WebGPU memory even then (releasing the session first did not reliably help). Detection runs in a
+worker, so the page keeps drawing frames meanwhile (longest gap 19 to 40 ms). Measured with
+`node web/tests/detector-bench.mjs`.
+
 ## Train it
 
     uv run ml/get_data.py                # the original real photos (46 MB)

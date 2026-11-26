@@ -5,7 +5,7 @@
 import { chromium } from 'playwright';
 
 const seeds = +(process.argv[2] ?? 3), shots = +(process.argv[3] ?? 20);
-const browser = await chromium.launch({ args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+const browser = await chromium.launch({ channel: process.env.CHANNEL, args: ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] }); // CHANNEL=chrome: real Chrome
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
 page.on('pageerror', (e) => { console.error(String(e)); process.exit(1); });
 await page.goto(`http://localhost:5173/${process.argv[4] ?? ''}`);

@@ -7,6 +7,5 @@ dependencies = ["rfdetr[train]>=1.12", "fastapi", "uvicorn", "pillow", "matplotl
 [dependency-groups]
 export = [
     "onnx>=1.16,<2",
-    "onnxconverter-common>=1.16.0",
     "onnxruntime>=1.32.0",
 ]
