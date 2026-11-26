@@ -1,16 +1,21 @@
 # Inspecto
 
-Photograph a wall, and a vision model running on your own laptop finds the damage (cracks,
+Photograph a wall, and a vision model running in your own browser finds the damage (cracks,
 mold, water stains, peeling paint, scuffs, holes), measures it and prices the repair. Nothing
 is uploaded and nothing costs money.
 
 **It is visual triage, not a licensed inspection.** It can miss damage and name it wrongly,
 it cannot see behind walls, and its repair prices are rough estimates, not quotes.
 
-**Live demo:** https://inspecto-tau.vercel.app (the 3D walkthrough only). The Python server is
-not connected there yet, so photo analysis, floor plans and saved inspections need a local run
-(below). It can be connected easily: host the server anywhere that runs Docker and forward
-`/api` to it from Vercel.
+**Live demo:** https://inspecto-tau.vercel.app. The 3D home (Analyze this view) and Check a photo
+work there with no server: the detector runs in your browser, and your photos never leave it.
+The first time you press Analyze or add a photo, the browser downloads the model once (54 MB)
+and keeps it, so later visits start at once. The site makes no other requests than its own
+files and the web fonts.
+
+Local only, because they need the Python server (see Run it): condition reports (saved
+inspections and the before / after photo comparison, OpenCV), reading floor plans (Tesseract),
+and HEIC photos in browsers other than Safari.
 
 ![Walking the demo apartment](docs/living.jpg)
 
@@ -28,7 +33,8 @@ not connected there yet, so photo analysis, floor plans and saved inspections ne
 | Report | `/report.html` | The 3D home's findings by room, with a suggested offer adjustment. |
 
 Prices can be set for a location (three test areas so far: New York City metro,
-Trenton-Princeton NJ, Scranton-Wilkes-Barre PA). iPhone photos work, including HEIC.
+Trenton-Princeton NJ, Scranton-Wilkes-Barre PA). iPhone photos work, including HEIC (in
+Safari, or anywhere with the local server).
 
 ## Run it
 
@@ -64,6 +70,12 @@ Both servers must be running. Tests drive a real browser and the real detector.
 
     cd .. && uv run python -m server.compare && uv run python -m server.inspections
 
+The live demo as visitors get it (production build, no server, Chrome and Safari's engine,
+desktop and phone):
+
+    cd web && npm run build && npx vite preview --port 4173 &
+    node tests/live.mjs path/to/a/wall-photo.jpg
+
 ## How good is the detector?
 
 | Test set | Precision | Recall |
@@ -81,9 +93,21 @@ breakdown to `results/eval.md`.
 
 ## The detector in the browser
 
-The same model also runs in the browser itself (onnxruntime-web in a Web Worker, WebGPU, or
-WASM where WebGPU is missing). The app uses the **fp16 build** (54 MB; the fp32 build is 108 MB):
-same results within half a point, half the download. GridSample nodes stay fp32.
+The same model also runs in the browser itself (onnxruntime-web in a Web Worker). The app uses
+the **fp16 build** (54 MB; the fp32 build is 108 MB): same results within half a point, half the
+download. GridSample nodes stay fp32.
+
+- **Backend:** WebGPU on desktop Chrome and Edge (about 40 ms per photo). Safari and every phone
+  use WASM (about 0.75 s per photo on an M3, 0.4 GB), because Safari's WebGPU held over 1 GB.
+  WebGPU falls back to WASM if it fails.
+- **Loading:** nothing is downloaded until the first Analyze or photo; then the model comes once,
+  with its size on screen, and is kept in the browser's Cache API. Leaving the page frees it.
+  Private browsing windows do not keep it.
+- **Hosting:** the model is served by the site itself (Vercel has no per-file limit). It is not
+  in git: `web/scripts/fetch-model.mjs` runs before every build and takes it from the
+  [model-v1 release](https://github.com/Ekagraj/Inspecto/releases/tag/model-v1), checksum-checked.
+  Vercel's Hobby plan includes 100 GB of transfer a month, about 1,850 first-time downloads.
+- In dev (`npm run dev`) the app still uses the Python server when it is running.
 
 Is the exported model the same detector? Precision / recall, threshold 0.4, IoU 0.5:
 

@@ -124,7 +124,11 @@ web/
   src/house.js     floor plan data + builder, roomAt(), surfaces list
   src/walk.js      pointer-lock look, WASD, circle-vs-wall collision
   src/defects.js   seeded planting of decal quads
-  src/detect.js    capture view, POST /api/detect
+  src/detect.js    capture view; detect(): in-browser worker (production) or POST /api/detect (dev, server up)
+  src/detect-worker.js  onnxruntime-web: WebGPU on desktop Chrome/Edge, else WASM; same pre/post as server/detector.py
+  scripts/fetch-model.mjs  prebuild: model from the GitHub release into public/onnx (not in git), checksum-checked
+  tests/live.mjs   production build, no server: photo page, 3D Analyze, cache, backends, no uploads
+  tests/browser-parity.mjs  tests/detector-bench.mjs  browser vs Python ONNX; speed and memory
   src/pins.js      boxes -> 3D pins (raycast), dedupe, picking
   src/minimap.js   floor-plan minimap
   src/fx.js        display-only post-processing
@@ -155,6 +159,7 @@ server/compare.py  lines up a move-out photo with its move-in photo and marks ea
 server/floorplan.py  floor plan picture -> walls (boxes), doors, windows, stairs, room names in metres (POST /api/floorplan).
                   No AI: OpenCV for the drawing; Tesseract reads the written lengths, which set the scale.
 ml/evaluate.py     per-class precision, recall, AP50 on unseen real photos -> results/eval.*
+ml/export_onnx.py  ml/parity.py  ONNX fp32/fp16 export for the browser; parity with PyTorch
 ml/make_plans.py  ml/eval_plans.py  random listing-style plans with true answers, and the reader's grade on them
 server/client.py   Ollama chat + scripted fallback
 ml/get_data.py  ml/train.py  ml/make_decals.py  ml/combine.py  ml/retrain.sh  ml/evaluate.py
